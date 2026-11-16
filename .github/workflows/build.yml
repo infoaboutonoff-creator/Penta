@@ -14,2106 +14,635 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
-      - name: File settings.gradle.kts
+      - name: Unpack project
         run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          cat > settings.gradle.kts <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.name = "ScreenPen"
-          include(":app")
-          EOF
-      - name: File build.gradle.kts
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          cat > build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application") version "8.5.2" apply false
-              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
-          }
-          EOF
-      - name: File gradle.properties
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          cat > gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2g
-          android.useAndroidX=true
-          EOF
-      - name: File app/build.gradle.kts
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app
-          cat > app/build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application")
-              id("org.jetbrains.kotlin.android")
-          }
-
-          android {
-              namespace = "com.example.screenpen"
-              compileSdk = 34
-
-              signingConfigs {
-                  create("rel") {
-                      storeFile = file("../rel.jks")
-                      storePassword = "android123"
-                      keyAlias = "key0"
-                      keyPassword = "android123"
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig = signingConfigs.getByName("rel")
-                      isMinifyEnabled = false
-                  }
-                  getByName("debug") {
-                      signingConfig = signingConfigs.getByName("rel")
-                  }
-              }
-
-              defaultConfig {
-                  applicationId = "com.abcstudy.screenpen"
-                  minSdk = 26
-                  targetSdk = 34
-                  versionCode = 2
-                  versionName = "2.0"
-              }
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-          }
-          EOF
-      - name: File app/src/main/AndroidManifest.xml
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-              <uses-permission android:name="android.permission.VIBRATE" />
-
-              <application
-                  android:allowBackup="true"
-                  android:icon="@mipmap/ic_launcher"
-                  android:label="ScreenPen"
-                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTask">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-
-                  <activity
-                      android:name=".TileActivity"
-                      android:exported="false"
-                      android:excludeFromRecents="true"
-                      android:taskAffinity=""
-                      android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-
-                  <service
-                      android:name=".OverlayService"
-                      android:exported="false"
-                      android:foregroundServiceType="specialUse">
-                      <property
-                          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                          android:value="screen_annotation" />
-                  </service>
-
-                  <service
-                      android:name=".PenTileService"
-                      android:exported="true"
-                      android:icon="@android:drawable/ic_menu_edit"
-                      android:label="ScreenPen"
-                      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-                      <intent-filter>
-                          <action android:name="android.service.quicksettings.action.QS_TILE" />
-                      </intent-filter>
-                  </service>
-
-              </application>
-          </manifest>
-          EOF
-      - name: File app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/res/mipmap-anydpi-v26
-          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@drawable/ic_launcher_bg" />
-              <foreground android:drawable="@drawable/ic_launcher_fg" />
-          </adaptive-icon>
-          EOF
-      - name: File app/src/main/res/drawable/ic_launcher_bg.xml
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/res/drawable
-          cat > app/src/main/res/drawable/ic_launcher_bg.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-              <solid android:color="#2F6BFF" />
-          </shape>
-          EOF
-      - name: File app/src/main/res/drawable/ic_launcher_fg.xml
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/res/drawable
-          cat > app/src/main/res/drawable/ic_launcher_fg.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="108dp"
-              android:height="108dp"
-              android:viewportWidth="108"
-              android:viewportHeight="108">
-              <path
-                  android:fillColor="#FFFFFF"
-                  android:pathData="M34,74 L37.5,60 L65,32.5 L75.5,43 L48,70.5 Z" />
-              <path
-                  android:fillColor="#00000000"
-                  android:strokeColor="#FFFFFF"
-                  android:strokeWidth="3.5"
-                  android:strokeLineCap="round"
-                  android:pathData="M34,78 C44,84 52,76 62,80 C68,82 72,80 76,78" />
-          </vector>
-          EOF
-      - name: File app/src/main/java/com/example/screenpen/Ui.kt
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/java/com/example/screenpen
-          cat > app/src/main/java/com/example/screenpen/Ui.kt <<'EOF'
-          package com.example.screenpen
-
-          import android.content.Context
-          import android.graphics.Canvas
-          import android.graphics.Color
-          import android.graphics.DashPathEffect
-          import android.graphics.Paint
-          import android.graphics.Path
-          import android.graphics.RectF
-          import android.graphics.drawable.GradientDrawable
-          import android.view.View
-          import kotlin.math.cos
-          import kotlin.math.hypot
-          import kotlin.math.min
-          import kotlin.math.roundToInt
-          import kotlin.math.sin
-
-          object C {
-              val ACCENT = 0xFF2F6BFF.toInt()
-              val BG = 0xFFF3F5F9.toInt()
-              val CARD = 0xFFFFFFFF.toInt()
-              val INK = 0xFF1B2433.toInt()
-              val SUB = 0xFF6B7588.toInt()
-              val LINE = 0xFFE3E8F0.toInt()
-              val DANGER = 0xFFE5484D.toInt()
-              val BAR = 0xFF1E2430.toInt()
-              val PANEL = 0xFF262D3B.toInt()
-              val PANEL_ITEM = 0xFF343C4D.toInt()
-              val ON_DARK = 0xFFE8ECF4.toInt()
-              val PALETTE = intArrayOf(
-                  0xFF111111.toInt(), 0xFFFFFFFF.toInt(), 0xFFE5333A.toInt(), 0xFFFF7A1A.toInt(),
-                  0xFFF5C400.toInt(), 0xFF7ED321.toInt(), 0xFF1A9E4B.toInt(), 0xFF00B8A9.toInt(),
-                  0xFF00B0FF.toInt(), 0xFF2F6BFF.toInt(), 0xFF6C4DFF.toInt(), 0xFFB44DFF.toInt(),
-                  0xFFFF4DA6.toInt(), 0xFF8B5A2B.toInt(), 0xFF7A8699.toInt(), 0xFFFFC8A6.toInt()
-              )
-          }
-
-          fun Context.dp(v: Float): Float = v * resources.displayMetrics.density
-          fun Context.dpi(v: Int): Int = (v * resources.displayMetrics.density).roundToInt()
-
-          fun roundBg(color: Int, radius: Float, stroke: Int = 0, strokeW: Float = 0f): GradientDrawable =
-              GradientDrawable().apply {
-                  setColor(color)
-                  cornerRadius = radius
-                  if (stroke != 0) setStroke(strokeW.roundToInt().coerceAtLeast(1), stroke)
-              }
-
-          fun withAlpha(color: Int, a: Int): Int = (color and 0x00FFFFFF) or (a.coerceIn(0, 255) shl 24)
-
-          enum class Ic {
-              PEN, ERASER, UNDO, REDO, EYE, EYE_OFF, SELECT, ORIENT, HL, SHAPES, PAGES, LASER, TIMER,
-              SAVE, TRASH, CLOSE, CURSOR, LOCK, UNLOCK, RESIZE, BACK, CHEV_R, CHEV_U, CHEV_D, PLUS, MINUS,
-              PLAY, PAUSE, NEXT, RESET, LINE, RECT, OVAL, ARROW, GRIP, CHECK, TOOLBAR
-          }
-
-          object Icons {
-              private val cache = HashMap<Ic, Path>()
-              private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                  style = Paint.Style.STROKE
-                  strokeCap = Paint.Cap.ROUND
-                  strokeJoin = Paint.Join.ROUND
-              }
-              private val dash = DashPathEffect(floatArrayOf(2.4f, 2.4f), 0f)
-
-              fun draw(c: Canvas, ic: Ic, cx: Float, cy: Float, size: Float, color: Int, sw: Float = 1.8f) {
-                  val p = cache.getOrPut(ic) { build(ic) }
-                  paint.color = color
-                  paint.strokeWidth = sw
-                  paint.pathEffect = if (ic == Ic.SELECT) dash else null
-                  c.save()
-                  c.translate(cx - size / 2f, cy - size / 2f)
-                  val s = size / 24f
-                  c.scale(s, s)
-                  if (ic == Ic.REDO) {
-                      c.scale(-1f, 1f)
-                      c.translate(-24f, 0f)
-                  }
-                  c.drawPath(p, paint)
-                  c.restore()
-              }
-
-              private fun Path.pl(vararg v: Float, close: Boolean = false): Path {
-                  moveTo(v[0], v[1])
-                  var i = 2
-                  while (i < v.size) { lineTo(v[i], v[i + 1]); i += 2 }
-                  if (close) close()
-                  return this
-              }
-
-              private fun Path.head(tx: Float, ty: Float, dx: Float, dy: Float, len: Float = 4.5f) {
-                  val l = hypot(dx, dy)
-                  val ux = -dx / l
-                  val uy = -dy / l
-                  for (a in floatArrayOf(0.6f, -0.6f)) {
-                      val ca = cos(a)
-                      val sa = sin(a)
-                      moveTo(tx, ty)
-                      lineTo(tx + (ux * ca - uy * sa) * len, ty + (ux * sa + uy * ca) * len)
-                  }
-              }
-
-              private fun Path.arcArrow(startDeg: Float, sweep: Float) {
-                  addArc(RectF(5f, 5f, 19f, 19f), startDeg, sweep)
-                  val a = Math.toRadians((startDeg + sweep).toDouble())
-                  val ex = 12f + 7f * cos(a).toFloat()
-                  val ey = 12f + 7f * sin(a).toFloat()
-                  head(ex, ey, (-sin(a)).toFloat(), cos(a).toFloat())
-              }
-
-              private fun build(ic: Ic): Path = Path().apply {
-                  when (ic) {
-                      Ic.PEN -> { pl(4f, 20f, 5f, 15f, 16f, 4f, 20f, 8f, 9f, 19f, close = true); pl(14f, 6f, 18f, 10f) }
-                      Ic.ERASER -> { pl(5f, 14f, 14f, 5f, 20f, 11f, 11f, 20f, close = true); pl(9.5f, 9.5f, 15.5f, 15.5f); pl(11f, 20f, 20f, 20f) }
-                      Ic.UNDO, Ic.REDO -> {
-                          pl(9f, 14f, 4f, 9f, 9f, 4f)
-                          moveTo(4f, 9f); lineTo(14f, 9f)
-                          cubicTo(17.5f, 9f, 20f, 11f, 20f, 14f)
-                          cubicTo(20f, 17f, 17.5f, 19f, 14f, 19f)
-                          lineTo(10f, 19f)
-                      }
-                      Ic.EYE, Ic.EYE_OFF -> {
-                          moveTo(2f, 12f)
-                          cubicTo(5f, 6.5f, 8.5f, 5f, 12f, 5f)
-                          cubicTo(15.5f, 5f, 19f, 6.5f, 22f, 12f)
-                          cubicTo(19f, 17.5f, 15.5f, 19f, 12f, 19f)
-                          cubicTo(8.5f, 19f, 5f, 17.5f, 2f, 12f)
-                          close()
-                          addCircle(12f, 12f, 3f, Path.Direction.CW)
-                          if (ic == Ic.EYE_OFF) pl(4f, 20f, 20f, 4f)
-                      }
-                      Ic.SELECT -> addRect(4f, 4f, 20f, 20f, Path.Direction.CW)
-                      Ic.ORIENT -> arcArrow(-50f, 270f)
-                      Ic.RESET -> arcArrow(-60f, 290f)
-                      Ic.HL -> { pl(6f, 15f, 14f, 7f, 18f, 11f, 10f, 19f, close = true); pl(10f, 19f, 4f, 20f, 6f, 15f) }
-                      Ic.SHAPES -> { addRect(3f, 3f, 13f, 13f, Path.Direction.CW); addCircle(15.5f, 15.5f, 5.5f, Path.Direction.CW) }
-                      Ic.PAGES -> { addRect(8f, 3f, 20f, 16f, Path.Direction.CW); pl(4f, 7f, 4f, 21f, 16f, 21f) }
-                      Ic.LASER -> {
-                          addCircle(12f, 12f, 3f, Path.Direction.CW)
-                          for (i in 0 until 8) {
-                              val a = Math.toRadians(i * 45.0)
-                              pl(12f + 6f * cos(a).toFloat(), 12f + 6f * sin(a).toFloat(), 12f + 9.5f * cos(a).toFloat(), 12f + 9.5f * sin(a).toFloat())
-                          }
-                      }
-                      Ic.TIMER -> { addCircle(12f, 12f, 9f, Path.Direction.CW); pl(12f, 7f, 12f, 12f, 15.5f, 14f) }
-                      Ic.SAVE -> { pl(12f, 4f, 12f, 15f); head(12f, 15f, 0f, 1f); pl(5f, 15f, 5f, 19f, 19f, 19f, 19f, 15f) }
-                      Ic.TRASH -> {
-                          pl(4f, 7f, 20f, 7f); pl(9f, 7f, 9f, 4f, 15f, 4f, 15f, 7f)
-                          pl(6f, 7f, 7f, 20f, 17f, 20f, 18f, 7f); pl(10f, 11f, 10f, 16f); pl(14f, 11f, 14f, 16f)
-                      }
-                      Ic.CLOSE -> { pl(6f, 6f, 18f, 18f); pl(18f, 6f, 6f, 18f) }
-                      Ic.CURSOR -> pl(6f, 3f, 6f, 19f, 10.5f, 15f, 14f, 21f, 16.5f, 19.5f, 13f, 14f, 18.5f, 13.5f, close = true)
-                      Ic.LOCK -> {
-                          addRoundRect(RectF(6f, 11f, 18f, 21f), 2f, 2f, Path.Direction.CW)
-                          moveTo(8.5f, 11f); lineTo(8.5f, 8f); arcTo(RectF(8.5f, 4.5f, 15.5f, 11.5f), 180f, 180f, false); lineTo(15.5f, 11f)
-                      }
-                      Ic.UNLOCK -> {
-                          addRoundRect(RectF(6f, 11f, 18f, 21f), 2f, 2f, Path.Direction.CW)
-                          moveTo(8.5f, 11f); lineTo(8.5f, 6f); arcTo(RectF(8.5f, 2.5f, 15.5f, 9.5f), 180f, 180f, false); lineTo(15.5f, 7.5f)
-                      }
-                      Ic.RESIZE -> { pl(6f, 18f, 18f, 6f); head(18f, 6f, 1f, -1f); head(6f, 18f, -1f, 1f) }
-                      Ic.BACK -> pl(15f, 5f, 8f, 12f, 15f, 19f)
-                      Ic.CHEV_R -> pl(9f, 5f, 16f, 12f, 9f, 19f)
-                      Ic.CHEV_U -> pl(5f, 15f, 12f, 8f, 19f, 15f)
-                      Ic.CHEV_D -> pl(5f, 9f, 12f, 16f, 19f, 9f)
-                      Ic.PLUS -> { pl(12f, 5f, 12f, 19f); pl(5f, 12f, 19f, 12f) }
-                      Ic.MINUS -> pl(5f, 12f, 19f, 12f)
-                      Ic.PLAY -> pl(8f, 5f, 19f, 12f, 8f, 19f, close = true)
-                      Ic.PAUSE -> { pl(9f, 5f, 9f, 19f); pl(15f, 5f, 15f, 19f) }
-                      Ic.NEXT -> { pl(6f, 5f, 14f, 12f, 6f, 19f, close = true); pl(18f, 5f, 18f, 19f) }
-                      Ic.LINE -> pl(5f, 19f, 19f, 5f)
-                      Ic.RECT -> addRect(4f, 6f, 20f, 18f, Path.Direction.CW)
-                      Ic.OVAL -> addOval(RectF(3f, 6f, 21f, 18f), Path.Direction.CW)
-                      Ic.ARROW -> { pl(5f, 19f, 19f, 5f); head(19f, 5f, 1f, -1f, 6f) }
-                      Ic.GRIP -> {
-                          for (x in floatArrayOf(9f, 15f)) for (y in floatArrayOf(6f, 12f, 18f)) addCircle(x, y, 1.1f, Path.Direction.CW)
-                      }
-                      Ic.CHECK -> pl(5f, 12f, 10f, 17f, 19f, 7f)
-                      Ic.TOOLBAR -> {
-                          addRoundRect(RectF(3f, 8f, 21f, 16f), 3f, 3f, Path.Direction.CW)
-                          addCircle(8f, 12f, 0.8f, Path.Direction.CW); addCircle(12f, 12f, 0.8f, Path.Direction.CW); addCircle(16f, 12f, 0.8f, Path.Direction.CW)
-                      }
-                  }
-              }
-          }
-
-          class IconView(ctx: Context, var ic: Ic, var tint: Int = Color.WHITE, var sw: Float = 1.8f, var frac: Float = 0.58f) : View(ctx) {
-              override fun onDraw(c: Canvas) {
-                  val s = min(width, height) * frac
-                  Icons.draw(c, ic, width / 2f, height / 2f, s, tint, sw)
-              }
-          }
-
-          /** Round colour swatch (mode 0) or pen-size dot (mode 1). */
-          class DotView(ctx: Context, var mode: Int, var color: Int, var value: Float = 4f, var ring: Int = Color.WHITE) : View(ctx) {
-              private val p = Paint(Paint.ANTI_ALIAS_FLAG)
-              override fun onDraw(c: Canvas) {
-                  val cx = width / 2f
-                  val cy = height / 2f
-                  val r = min(width, height) / 2f
-                  if (mode == 0) {
-                      p.style = Paint.Style.FILL; p.color = color
-                      c.drawCircle(cx, cy, r * 0.46f, p)
-                      p.style = Paint.Style.STROKE; p.strokeWidth = context.dp(1.6f); p.color = ring
-                      c.drawCircle(cx, cy, r * 0.58f, p)
-                  } else {
-                      p.style = Paint.Style.STROKE; p.strokeWidth = context.dp(1.6f); p.color = withAlpha(color, 150)
-                      c.drawCircle(cx, cy, r * 0.58f, p)
-                      p.style = Paint.Style.FILL; p.color = color
-                      val dr = (context.dp(value) / 2f).coerceIn(context.dp(1.5f), r * 0.5f)
-                      c.drawCircle(cx, cy, dr, p)
-                  }
-              }
-          }
-          EOF
-      - name: File app/src/main/java/com/example/screenpen/Prefs.kt
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/java/com/example/screenpen
-          cat > app/src/main/java/com/example/screenpen/Prefs.kt <<'EOF'
-          package com.example.screenpen
-
-          import android.content.Context
-          import android.content.SharedPreferences
-
-          object K {
-              const val PEN_COLOR = "penColor"
-              const val PEN_W = "penW"
-              const val HL_W = "hlW"
-              const val ER_TYPE = "erType"
-              const val ER_W = "erW"
-              const val ER_AUTO = "erAuto"
-              const val STRAIGHT = "straight"
-              const val PALM = "palm"
-              const val FAVS = "favs"
-              const val START_ORIENT = "startOrient"
-              const val LAST_ORIENT = "lastOrient"
-              const val TB_ITEMS = "tbItems"
-              const val TB_SIZE = "tbSize"
-              const val TB_ALPHA = "tbAlpha"
-              const val TB_COLOR = "tbColor"
-              const val TB_X = "tbX"
-              const val TB_Y = "tbY"
-              const val TM_MODE = "tmMode"
-              const val TM_SEC = "tmSec"
-              const val TM_PRESETS = "tmPresets"
-              const val TM_FMT = "tmFmt"
-              const val TM_TEXT = "tmText"
-              const val TM_BG = "tmBg"
-              const val TM_WARN = "tmWarn"
-              const val TM_OVER = "tmOver"
-              const val TM_SIZE = "tmSize"
-              const val TM_ALPHA = "tmAlpha"
-              const val TM_ALERT = "tmAlert"
-              const val TM_WARN_AT = "tmWarnAt"
-              const val TM_OVERTIME = "tmOvertime"
-              const val TM_LOG = "tmLog"
-              const val TM_X = "tmX"
-              const val TM_Y = "tmY"
-              const val TM_ON = "tmOn"
-              const val AUTOSAVE = "autosave"
-          }
-
-          class Item(val id: String, val label: String, val ic: Ic, val desc: String)
-
-          class Prefs private constructor(c: Context) {
-              val sp: SharedPreferences = c.applicationContext.getSharedPreferences("screenpen", Context.MODE_PRIVATE)
-
-              companion object {
-                  @Volatile private var inst: Prefs? = null
-                  fun get(c: Context): Prefs = inst ?: synchronized(this) { inst ?: Prefs(c).also { inst = it } }
-
-                  val DEF: Map<String, Any> = mapOf(
-                      K.PEN_COLOR to 0xFFE5333A.toInt(), K.PEN_W to 4, K.HL_W to 22,
-                      K.ER_TYPE to "area", K.ER_W to 28, K.ER_AUTO to true,
-                      K.STRAIGHT to true, K.PALM to "off",
-                      K.FAVS to "ffe5333a,ff2f6bff,ff1a9e4b,fff5c400,ff111111,ffffffff",
-                      K.START_ORIENT to "h", K.LAST_ORIENT to "h",
-                      K.TB_ITEMS to "", K.TB_SIZE to 40, K.TB_ALPHA to 94, K.TB_COLOR to 0xFF1E2430.toInt(),
-                      K.TB_X to 24, K.TB_Y to 220,
-                      K.TM_MODE to "down", K.TM_SEC to 90, K.TM_PRESETS to "30,60,90,120", K.TM_FMT to "ms",
-                      K.TM_TEXT to 0xFFFFFFFF.toInt(), K.TM_BG to 0xFF1E2430.toInt(),
-                      K.TM_WARN to 0xFFFFB020.toInt(), K.TM_OVER to 0xFFFF4D4F.toInt(),
-                      K.TM_SIZE to 15, K.TM_ALPHA to 92, K.TM_ALERT to "vib", K.TM_WARN_AT to 10,
-                      K.TM_OVERTIME to true, K.TM_LOG to true, K.TM_X to 24, K.TM_Y to 120, K.TM_ON to false,
-                      K.AUTOSAVE to true
-                  )
-
-                  val ITEMS: List<Item> = listOf(
-                      Item("redo", "Redo", Ic.REDO, "Bring back what you undid"),
-                      Item("color", "Colour", Ic.PEN, "Quick colour and thickness panel"),
-                      Item("size", "Pen size", Ic.PEN, "Quick thickness slider"),
-                      Item("hl", "Highlighter", Ic.HL, "Translucent marker"),
-                      Item("shapes", "Shapes", Ic.SHAPES, "Line, rectangle, oval, arrow"),
-                      Item("select", "Select", Ic.SELECT, "Circle ink to move, resize, rotate, lock"),
-                      Item("laser", "Laser pointer", Ic.LASER, "Fading pointer, leaves no ink"),
-                      Item("eye", "Show / hide ink", Ic.EYE, "Hide everything without clearing"),
-                      Item("orient", "Rotate toolbar", Ic.ORIENT, "Switch horizontal and vertical"),
-                      Item("pages", "Pages", Ic.PAGES, "Several pages of ink"),
-                      Item("timer", "Timer", Ic.TIMER, "Floating question timer"),
-                      Item("save", "Save as image", Ic.SAVE, "Transparent PNG of this page"),
-                      Item("clear", "Clear page", Ic.TRASH, "Remove all ink on this page"),
-                      Item("close", "Close pen", Ic.CLOSE, "Stop ScreenPen")
-                  )
-              }
-
-              fun int(k: String): Int = sp.getInt(k, DEF[k] as Int)
-              fun bool(k: String): Boolean = sp.getBoolean(k, DEF[k] as Boolean)
-              fun str(k: String): String = sp.getString(k, DEF[k] as String) ?: (DEF[k] as String)
-
-              fun set(k: String, v: Any) {
-                  val e = sp.edit()
-                  when (v) {
-                      is Int -> e.putInt(k, v)
-                      is Boolean -> e.putBoolean(k, v)
-                      is String -> e.putString(k, v)
-                  }
-                  e.apply()
-              }
-
-              fun enabledItems(): List<Item> =
-                  str(K.TB_ITEMS).split(",").filter { it.isNotBlank() }.mapNotNull { id -> ITEMS.firstOrNull { it.id == id } }
-
-              fun setEnabledItems(ids: List<String>) = set(K.TB_ITEMS, ids.joinToString(","))
-
-              fun favs(): MutableList<Int> =
-                  str(K.FAVS).split(",").mapNotNull { runCatching { java.lang.Long.parseLong(it, 16).toInt() }.getOrNull() }.toMutableList()
-
-              fun setFavs(l: List<Int>) = set(K.FAVS, l.joinToString(",") { Integer.toHexString(it) })
-
-              fun presets(): List<Int> = str(K.TM_PRESETS).split(",").mapNotNull { it.trim().toIntOrNull() }.filter { it > 0 }
-          }
-          EOF
-      - name: File app/src/main/java/com/example/screenpen/Model.kt
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/java/com/example/screenpen
-          cat > app/src/main/java/com/example/screenpen/Model.kt <<'EOF'
-          package com.example.screenpen
-
-          import android.content.ContentValues
-          import android.content.Context
-          import android.graphics.Bitmap
-          import android.graphics.Matrix
-          import android.graphics.Path
-          import android.graphics.RectF
-          import android.os.Build
-          import android.os.Environment
-          import android.provider.MediaStore
-          import org.json.JSONArray
-          import java.io.File
-
-          /** Growable float list. */
-          class FL {
-              var a = FloatArray(64)
-              var n = 0
-              fun add(v: Float) {
-                  if (n == a.size) a = a.copyOf(n * 2)
-                  a[n++] = v
-              }
-              fun add2(x: Float, y: Float) { add(x); add(y) }
-              fun clear() { n = 0 }
-              fun toArray(): FloatArray = a.copyOf(n)
-          }
-
-          /** kind: 0 = pen (smooth), 1 = highlighter (smooth, translucent), 2 = shape / straight lines. */
-          class Stroke(val kind: Int, val color: Int, val width: Float, val pts: FloatArray, val locked: Boolean = false) {
-              val count: Int get() = pts.size / 2
-
-              val path: Path by lazy {
-                  val p = Path()
-                  val n = count
-                  if (n > 0) {
-                      p.moveTo(pts[0], pts[1])
-                      if (n == 1) {
-                          p.lineTo(pts[0] + 0.01f, pts[1])
-                      } else if (kind == 2 || n == 2) {
-                          for (i in 1 until n) p.lineTo(pts[2 * i], pts[2 * i + 1])
-                      } else {
-                          for (i in 1 until n - 1) {
-                              val x = pts[2 * i]
-                              val y = pts[2 * i + 1]
-                              p.quadTo(x, y, (x + pts[2 * i + 2]) / 2f, (y + pts[2 * i + 3]) / 2f)
-                          }
-                          p.lineTo(pts[2 * n - 2], pts[2 * n - 1])
-                      }
-                  }
-                  p
-              }
-
-              val bounds: RectF by lazy {
-                  var l = Float.MAX_VALUE; var t = Float.MAX_VALUE; var r = -Float.MAX_VALUE; var b = -Float.MAX_VALUE
-                  for (i in 0 until count) {
-                      val x = pts[2 * i]; val y = pts[2 * i + 1]
-                      if (x < l) l = x; if (x > r) r = x
-                      if (y < t) t = y; if (y > b) b = y
-                  }
-                  RectF(l, t, r, b)
-              }
-
-              fun withLocked(v: Boolean) = Stroke(kind, color, width, pts, v)
-
-              fun transformed(m: Matrix): Stroke {
-                  val p = pts.copyOf()
-                  m.mapPoints(p)
-                  return Stroke(kind, color, width, p, locked)
-              }
-          }
-
-          class Snap(val before: List<Stroke>, val after: List<Stroke>)
-
-          class Page {
-              var strokes = ArrayList<Stroke>()
-              val undo = ArrayList<Snap>()
-              val redo = ArrayList<Snap>()
-          }
-
-          class Doc {
-              val pages = ArrayList<Page>().apply { add(Page()) }
-              var cur = 0
-              val page: Page get() = pages[cur]
-          }
-
-          object Store {
-              private val lock = Any()
-
-              private fun file(c: Context) = File(c.filesDir, "pages.json")
-
-              fun serialize(doc: Doc): String {
-                  val sb = StringBuilder(4096)
-                  sb.append("{\"cur\":").append(doc.cur).append(",\"pages\":[")
-                  for ((pi, pg) in doc.pages.withIndex()) {
-                      if (pi > 0) sb.append(',')
-                      sb.append('[')
-                      for ((si, s) in pg.strokes.withIndex()) {
-                          if (si > 0) sb.append(',')
-                          sb.append('[').append(s.kind).append(',').append(s.color).append(',').append(s.width).append(',')
-                              .append(if (s.locked) 1 else 0).append(",[")
-                          for (i in s.pts.indices) {
-                              if (i > 0) sb.append(',')
-                              sb.append(Math.round(s.pts[i] * 10f) / 10f)
-                          }
-                          sb.append("]]")
-                      }
-                      sb.append(']')
-                  }
-                  sb.append("]}")
-                  return sb.toString()
-              }
-
-              fun saveAsync(c: Context, doc: Doc) {
-                  val s = serialize(doc)
-                  val f = file(c)
-                  Thread { synchronized(lock) { runCatching { f.writeText(s) } } }.start()
-              }
-
-              fun saveSync(c: Context, doc: Doc) {
-                  val s = serialize(doc)
-                  synchronized(lock) { runCatching { file(c).writeText(s) } }
-              }
-
-              fun deleteSaved(c: Context) {
-                  synchronized(lock) { runCatching { file(c).delete() } }
-              }
-
-              fun load(c: Context): Doc {
-                  val doc = Doc()
-                  runCatching {
-                      val f = file(c)
-                      if (!f.exists()) return doc
-                      val root = org.json.JSONObject(f.readText())
-                      val pages = root.getJSONArray("pages")
-                      doc.pages.clear()
-                      for (i in 0 until pages.length()) {
-                          val pg = Page()
-                          val arr = pages.getJSONArray(i)
-                          for (j in 0 until arr.length()) {
-                              val s = arr.getJSONArray(j)
-                              val pa = s.getJSONArray(4)
-                              val pts = FloatArray(pa.length()) { pa.getDouble(it).toFloat() }
-                              pg.strokes.add(Stroke(s.getInt(0), s.getInt(1), s.getDouble(2).toFloat(), pts, s.getInt(3) == 1))
-                          }
-                          doc.pages.add(pg)
-                      }
-                      if (doc.pages.isEmpty()) doc.pages.add(Page())
-                      doc.cur = root.getInt("cur").coerceIn(0, doc.pages.size - 1)
-                  }.onFailure {
-                      doc.pages.clear(); doc.pages.add(Page()); doc.cur = 0
-                  }
-                  return doc
-              }
-
-              /** Saves a transparent PNG. Returns true on success. */
-              fun exportPng(c: Context, bmp: Bitmap): Boolean {
-                  val name = "ScreenPen_" + System.currentTimeMillis() + ".png"
-                  return runCatching {
-                      if (Build.VERSION.SDK_INT >= 29) {
-                          val v = ContentValues().apply {
-                              put(MediaStore.Images.Media.DISPLAY_NAME, name)
-                              put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-                              put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/ScreenPen")
-                          }
-                          val uri = c.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v)!!
-                          c.contentResolver.openOutputStream(uri)!!.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                      } else {
-                          val dir = c.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
-                          File(dir, name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                      }
-                      true
-                  }.getOrDefault(false)
-              }
-
-              // ---- question log: one line per entry "timestamp,question,ms,targetMs" ----
-              private fun logFile(c: Context) = File(c.filesDir, "qlog.txt")
-
-              fun addLog(c: Context, q: Int, ms: Long, target: Long) {
-                  synchronized(lock) {
-                      runCatching {
-                          val f = logFile(c)
-                          f.appendText("${System.currentTimeMillis()},$q,$ms,$target\n")
-                          val lines = f.readLines()
-                          if (lines.size > 400) f.writeText(lines.takeLast(300).joinToString("\n") + "\n")
-                      }
-                  }
-              }
-
-              class LogEntry(val ts: Long, val q: Int, val ms: Long, val target: Long)
-
-              fun readLog(c: Context): List<LogEntry> = synchronized(lock) {
-                  runCatching {
-                      logFile(c).readLines().mapNotNull {
-                          val p = it.split(",")
-                          if (p.size < 4) null else LogEntry(p[0].toLong(), p[1].toInt(), p[2].toLong(), p[3].toLong())
-                      }
-                  }.getOrDefault(emptyList())
-              }
-
-              fun clearLog(c: Context) {
-                  synchronized(lock) { runCatching { logFile(c).delete() } }
-              }
-          }
-
-          fun fmtTime(msIn: Long, f: String): String {
-              val ms = if (msIn < 0) 0 else msIn
-              val totalS = ms / 1000
-              return when (f) {
-                  "hms" -> String.format("%02d:%02d:%02d", totalS / 3600, (totalS % 3600) / 60, totalS % 60)
-                  "mst" -> String.format("%02d:%02d.%d", totalS / 60, totalS % 60, (ms % 1000) / 100)
-                  "s" -> totalS.toString()
-                  else -> String.format("%02d:%02d", totalS / 60, totalS % 60)
-              }
-          }
-          EOF
-      - name: File app/src/main/java/com/example/screenpen/DrawView.kt
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/java/com/example/screenpen
-          cat > app/src/main/java/com/example/screenpen/DrawView.kt <<'EOF'
-          package com.example.screenpen
-
-          import android.content.Context
-          import android.graphics.Bitmap
-          import android.graphics.Canvas
-          import android.graphics.Color
-          import android.graphics.DashPathEffect
-          import android.graphics.Matrix
-          import android.graphics.Paint
-          import android.graphics.Path
-          import android.graphics.RectF
-          import android.os.SystemClock
-          import android.view.MotionEvent
-          import android.view.View
-          import java.util.Collections
-          import java.util.IdentityHashMap
-          import kotlin.math.atan2
-          import kotlin.math.cos
-          import kotlin.math.hypot
-          import kotlin.math.max
-          import kotlin.math.min
-          import kotlin.math.sin
-
-          class DrawView(ctx: Context) : View(ctx) {
-
-              enum class Tool { PEN, HL, ERASER, SELECT, SHAPE, LASER }
-
-              private class LP(val x: Float, val y: Float, val t: Long)
-
-              var doc = Doc()
-              var tool = Tool.PEN
-                  set(v) {
-                      if (field != v) {
-                          field = v
-                          clearSel()
-                          cancelGesture()
-                          invalidate()
-                      }
-                  }
-              var shape = 0 // 0 line, 1 rect, 2 oval, 3 arrow
-              var penColor = Color.RED
-              var penW = 4f
-              var hlW = 22f
-              var erArea = true
-              var erW = 28f
-              var straighten = true
-              var palm = "off"
-              var hidden = false
-                  set(v) { field = v; invalidate() }
-              var onCommit: (() -> Unit)? = null
-              var onEraseDone: (() -> Unit)? = null
-
-              private val d = ctx.resources.displayMetrics.density
-              private val page: Page get() = doc.page
-
-              private val sp = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeJoin = Paint.Join.ROUND }
-              private val fp = Paint(Paint.ANTI_ALIAS_FLAG)
-              private val dash = DashPathEffect(floatArrayOf(14f, 10f), 0f)
-
-              // live gesture
-              private var gesture = 0
-              private var ignoring = false
-              private val cur = FL()
-              private var curPath = Path()
-              private var lastX = 0f
-              private var lastY = 0f
-              private var holdX = 0f
-              private var holdY = 0f
-              private var straight = false
-              private var before: List<Stroke> = emptyList()
-              private var shapePts: FloatArray? = null
-              private var sx0 = 0f
-              private var sy0 = 0f
-              private var erX = 0f
-              private var erY = 0f
-              private var erActive = false
-
-              // selection
-              private val sel = ArrayList<Stroke>()
-              private val selSet: MutableSet<Stroke> = Collections.newSetFromMap(IdentityHashMap())
-              private val selBounds = RectF()
-              private var sCx = 0f
-              private var sCy = 0f
-              private var sAng = 0f
-              private var sSc = 1f
-              private val selM = Matrix()
-              private val selInv = Matrix()
-              private var corners = FloatArray(8)
-              private var selMode = 0 // 1 lasso, 2 move, 3 rotate, 4 scale, 5 lock tap, 6 blocked, 7 ignore
-              private val lasso = FL()
-              private var downX = 0f
-              private var downY = 0f
-              private var cx0 = 0f
-              private var cy0 = 0f
-              private var startAng = 0f
-              private var ang0 = 0f
-              private var dist0 = 1f
-              private var sc0 = 1f
-              private var movedFar = false
-              private val boxPath = Path()
-
-              private val laser = ArrayList<LP>()
-              private var laserDown = false
-
-              private val holdRun = Runnable {
-                  if (gesture == 1 && !straight && cur.n >= 4) {
-                      straight = true
-                      val x0 = cur.a[0]
-                      val y0 = cur.a[1]
-                      cur.clear(); cur.add2(x0, y0); cur.add2(lastX, lastY)
-                      rebuildStraight()
-                      invalidate()
-                  }
-              }
-              private val longRun = Runnable {
-                  if (gesture == 4) {
-                      clearSel(); selMode = 7; lasso.clear(); invalidate()
-                  }
-              }
-
-              val hasUndo: Boolean get() = page.undo.isNotEmpty()
-              val hasRedo: Boolean get() = page.redo.isNotEmpty()
-
-              // ------------------------------------------------------------------ drawing
-              override fun onDraw(c: Canvas) {
-                  if (hidden) return
-                  for (s in page.strokes) if (!selSet.contains(s)) drawStroke(c, s)
-                  if (sel.isNotEmpty()) {
-                      c.save(); c.concat(selM)
-                      for (s in sel) drawStroke(c, s)
-                      c.restore()
-                      drawSelBox(c)
-                  }
-                  when (gesture) {
-                      1 -> {
-                          sp.style = Paint.Style.STROKE
-                          val hl = tool == Tool.HL
-                          sp.strokeWidth = if (hl) hlW else penW
-                          sp.strokeCap = if (hl) Paint.Cap.SQUARE else Paint.Cap.ROUND
-                          sp.color = penColor
-                          if (hl) sp.alpha = 105
-                          c.drawPath(curPath, sp)
-                      }
-                      2 -> shapePts?.let {
-                          sp.strokeWidth = penW; sp.strokeCap = Paint.Cap.ROUND; sp.color = penColor
-                          val p = Path()
-                          p.moveTo(it[0], it[1])
-                          var i = 2
-                          while (i < it.size) { p.lineTo(it[i], it[i + 1]); i += 2 }
-                          c.drawPath(p, sp)
-                      }
-                      4 -> if (selMode == 1 && lasso.n >= 4) {
-                          boxPath.reset()
-                          boxPath.moveTo(lasso.a[0], lasso.a[1])
-                          var i = 2
-                          while (i < lasso.n) { boxPath.lineTo(lasso.a[i], lasso.a[i + 1]); i += 2 }
-                          sp.pathEffect = dash; sp.strokeWidth = 1.6f * d; sp.color = C.ACCENT; sp.strokeCap = Paint.Cap.ROUND
-                          c.drawPath(boxPath, sp)
-                          sp.pathEffect = null
-                      }
-                  }
-                  if (erActive) {
-                      val r = if (erArea) erW / 2f else max(erW / 2f, 6f * d)
-                      fp.style = Paint.Style.FILL; fp.color = 0x33FFFFFF
-                      c.drawCircle(erX, erY, r, fp)
-                      fp.style = Paint.Style.STROKE; fp.strokeWidth = 1.5f * d; fp.color = 0xCC222222.toInt()
-                      c.drawCircle(erX, erY, r, fp)
-                  }
-                  drawLaser(c)
-              }
-
-              private fun drawStroke(c: Canvas, s: Stroke) {
-                  sp.style = Paint.Style.STROKE
-                  sp.strokeWidth = s.width
-                  sp.strokeCap = if (s.kind == 1) Paint.Cap.SQUARE else Paint.Cap.ROUND
-                  sp.color = s.color
-                  if (s.kind == 1) sp.alpha = 105
-                  sp.pathEffect = null
-                  c.drawPath(s.path, sp)
-              }
-
-              private fun drawLaser(c: Canvas) {
-                  if (laser.isEmpty()) return
-                  val now = SystemClock.uptimeMillis()
-                  laser.removeAll { now - it.t > 650 }
-                  for (i in 1 until laser.size) {
-                      val a = laser[i - 1]
-                      val b = laser[i]
-                      val k = 1f - (now - b.t) / 650f
-                      sp.style = Paint.Style.STROKE; sp.pathEffect = null; sp.strokeCap = Paint.Cap.ROUND
-                      sp.color = 0xFFFF2D2D.toInt(); sp.alpha = (200 * k).toInt().coerceIn(0, 255)
-                      sp.strokeWidth = (3f + 5f * k) * d
-                      c.drawLine(a.x, a.y, b.x, b.y, sp)
-                  }
-                  laser.lastOrNull()?.let {
-                      val k = (1f - (now - it.t) / 650f).coerceIn(0f, 1f)
-                      fp.style = Paint.Style.FILL
-                      fp.color = 0xFFFF2D2D.toInt(); fp.alpha = (70 * k).toInt()
-                      c.drawCircle(it.x, it.y, 14f * d, fp)
-                      fp.color = 0xFFFF2D2D.toInt(); fp.alpha = (255 * k).toInt()
-                      c.drawCircle(it.x, it.y, 6f * d, fp)
-                      fp.color = Color.WHITE; fp.alpha = (255 * k).toInt()
-                      c.drawCircle(it.x, it.y, 2.4f * d, fp)
-                  }
-                  if (laser.isNotEmpty()) postInvalidateOnAnimation()
-              }
-
-              private fun drawSelBox(c: Canvas) {
-                  val q = corners
-                  boxPath.reset()
-                  boxPath.moveTo(q[0], q[1]); boxPath.lineTo(q[2], q[3]); boxPath.lineTo(q[4], q[5]); boxPath.lineTo(q[6], q[7]); boxPath.close()
-                  sp.style = Paint.Style.STROKE; sp.strokeWidth = 1.6f * d; sp.color = C.ACCENT; sp.pathEffect = dash
-                  c.drawPath(boxPath, sp)
-                  sp.pathEffect = null
-                  val locked = selLocked()
-                  handle(c, q[0], q[1], if (locked) Ic.LOCK else Ic.UNLOCK, false)
-                  handle(c, q[2], q[3], Ic.ORIENT, locked)
-                  handle(c, q[4], q[5], Ic.RESIZE, locked)
-              }
-
-              private fun handle(c: Canvas, x: Float, y: Float, ic: Ic, dim: Boolean) {
-                  fp.style = Paint.Style.FILL
-                  fp.color = if (dim) 0xFF9AA7BD.toInt() else C.ACCENT
-                  c.drawCircle(x, y, 15f * d, fp)
-                  Icons.draw(c, ic, x, y, 18f * d, Color.WHITE, 2f)
-              }
-
-              // ------------------------------------------------------------------ touch
-              override fun onTouchEvent(e: MotionEvent): Boolean {
-                  if (hidden) return false
-                  val a = e.actionMasked
-                  if (a == MotionEvent.ACTION_DOWN) {
-                      ignoring = false
-                      if (palm == "stylus" && e.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) ignoring = true
-                      if (palm == "palm" && e.getTouchMajor(0) > 110f * d) ignoring = true
-                  }
-                  if (ignoring) {
-                      if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) ignoring = false
-                      return true
-                  }
-                  if (palm != "off" && e.pointerCount > 1) return true
-                  when (tool) {
-                      Tool.PEN, Tool.HL -> penTouch(a, e)
-                      Tool.SHAPE -> shapeTouch(a, e)
-                      Tool.ERASER -> eraseTouch(a, e)
-                      Tool.SELECT -> selectTouch(a, e)
-                      Tool.LASER -> laserTouch(a, e)
-                  }
-                  return true
-              }
-
-              private fun cancelGesture() {
-                  removeCallbacks(holdRun); removeCallbacks(longRun)
-                  gesture = 0; erActive = false; shapePts = null; selMode = 0; laserDown = false
-              }
-
-              private fun commit(prev: List<Stroke>) {
-                  val p = page
-                  p.undo.add(Snap(prev, ArrayList(p.strokes)))
-                  if (p.undo.size > 80) p.undo.removeAt(0)
-                  p.redo.clear()
-                  onCommit?.invoke()
-                  invalidate()
-              }
-
-              // ---- pen / highlighter
-              private fun penTouch(a: Int, e: MotionEvent) {
-                  when (a) {
-                      MotionEvent.ACTION_DOWN -> {
-                          cur.clear(); cur.add2(e.x, e.y)
-                          curPath = Path(); curPath.moveTo(e.x, e.y)
-                          lastX = e.x; lastY = e.y; holdX = e.x; holdY = e.y
-                          straight = false
-                          before = ArrayList(page.strokes)
-                          gesture = 1
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_MOVE -> if (gesture == 1) {
-                          for (i in 0 until e.historySize) addPenPoint(e.getHistoricalX(i), e.getHistoricalY(i))
-                          addPenPoint(e.x, e.y)
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_UP -> finishPen(true)
-                      MotionEvent.ACTION_CANCEL -> finishPen(false)
-                  }
-              }
-
-              private fun addPenPoint(x: Float, y: Float) {
-                  if (straight) {
-                      cur.a[2] = x; cur.a[3] = y
-                      lastX = x; lastY = y
-                      rebuildStraight()
-                      return
-                  }
-                  if (hypot(x - lastX, y - lastY) < 1.2f * d) return
-                  cur.add2(x, y)
-                  curPath.quadTo(lastX, lastY, (x + lastX) / 2f, (y + lastY) / 2f)
-                  lastX = x; lastY = y
-                  if (hypot(x - holdX, y - holdY) > 6f * d) {
-                      holdX = x; holdY = y
-                      removeCallbacks(holdRun)
-                      if (straighten) postDelayed(holdRun, 550)
-                  }
-              }
-
-              private fun rebuildStraight() {
-                  curPath = Path()
-                  curPath.moveTo(cur.a[0], cur.a[1])
-                  curPath.lineTo(cur.a[2], cur.a[3])
-              }
-
-              private fun finishPen(ok: Boolean) {
-                  removeCallbacks(holdRun)
-                  if (gesture != 1) return
-                  gesture = 0
-                  if (ok && cur.n >= 2) {
-                      val hl = tool == Tool.HL
-                      page.strokes.add(Stroke(if (hl) 1 else 0, penColor, if (hl) hlW else penW, cur.toArray()))
-                      commit(before)
-                  }
-                  curPath = Path()
-                  invalidate()
-              }
-
-              // ---- shapes
-              private fun makeShape(kind: Int, x0: Float, y0: Float, x1: Float, y1: Float): FloatArray = when (kind) {
-                  1 -> floatArrayOf(x0, y0, x1, y0, x1, y1, x0, y1, x0, y0)
-                  2 -> {
-                      val cx = (x0 + x1) / 2f
-                      val cy = (y0 + y1) / 2f
-                      val rx = Math.abs(x1 - x0) / 2f
-                      val ry = Math.abs(y1 - y0) / 2f
-                      val n = 48
-                      FloatArray((n + 1) * 2).also {
-                          for (i in 0..n) {
-                              val t = (2.0 * Math.PI * i / n)
-                              it[2 * i] = cx + rx * cos(t).toFloat()
-                              it[2 * i + 1] = cy + ry * sin(t).toFloat()
-                          }
-                      }
-                  }
-                  3 -> {
-                      val ang = atan2(y1 - y0, x1 - x0)
-                      val hl = min(26f * d, hypot(x1 - x0, y1 - y0) * 0.4f)
-                      floatArrayOf(
-                          x0, y0, x1, y1,
-                          x1 - hl * cos(ang - 0.45f), y1 - hl * sin(ang - 0.45f), x1, y1,
-                          x1 - hl * cos(ang + 0.45f), y1 - hl * sin(ang + 0.45f)
-                      )
-                  }
-                  else -> floatArrayOf(x0, y0, x1, y1)
-              }
-
-              private fun shapeTouch(a: Int, e: MotionEvent) {
-                  when (a) {
-                      MotionEvent.ACTION_DOWN -> {
-                          sx0 = e.x; sy0 = e.y
-                          before = ArrayList(page.strokes)
-                          shapePts = makeShape(shape, sx0, sy0, e.x, e.y)
-                          gesture = 2
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_MOVE -> if (gesture == 2) {
-                          shapePts = makeShape(shape, sx0, sy0, e.x, e.y); invalidate()
-                      }
-                      MotionEvent.ACTION_UP -> {
-                          if (gesture == 2 && hypot(e.x - sx0, e.y - sy0) > 6f * d) {
-                              page.strokes.add(Stroke(2, penColor, penW, makeShape(shape, sx0, sy0, e.x, e.y)))
-                              commit(before)
-                          }
-                          gesture = 0; shapePts = null; invalidate()
-                      }
-                      MotionEvent.ACTION_CANCEL -> { gesture = 0; shapePts = null; invalidate() }
-                  }
-              }
-
-              // ---- erasers
-              private fun eraseTouch(a: Int, e: MotionEvent) {
-                  when (a) {
-                      MotionEvent.ACTION_DOWN -> {
-                          before = ArrayList(page.strokes)
-                          gesture = 3; erActive = true
-                          erX = e.x; erY = e.y
-                          eraseAt(erX, erY)
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_MOVE -> if (gesture == 3) {
-                          for (i in 0 until e.historySize) eraseSeg(e.getHistoricalX(i), e.getHistoricalY(i))
-                          eraseSeg(e.x, e.y)
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> if (gesture == 3) {
-                          gesture = 0; erActive = false
-                          val now = page.strokes
-                          val changed = now.size != before.size || now.indices.any { now[it] !== before[it] }
-                          if (changed) commit(before)
-                          invalidate()
-                          onEraseDone?.invoke()
-                      }
-                  }
-              }
-
-              private fun eraseSeg(x: Float, y: Float) {
-                  val r = erW / 2f
-                  val step = max(r * 0.5f, 3f * d)
-                  val dist = hypot(x - erX, y - erY)
-                  val n = Math.ceil((dist / step).toDouble()).toInt().coerceAtLeast(1)
-                  val sx = erX
-                  val sy = erY
-                  for (i in 1..n) eraseAt(sx + (x - sx) * i / n, sy + (y - sy) * i / n)
-                  erX = x; erY = y
-              }
-
-              private fun eraseAt(x: Float, y: Float) {
-                  if (erArea) eraseArea(x, y, erW / 2f) else eraseStroke(x, y, max(erW / 2f, 6f * d))
-              }
-
-              private fun nearBounds(b: RectF, x: Float, y: Float, r: Float) =
-                  x >= b.left - r && x <= b.right + r && y >= b.top - r && y <= b.bottom + r
-
-              private fun eraseStroke(x: Float, y: Float, r: Float) {
-                  var changed = false
-                  val out = ArrayList<Stroke>(page.strokes.size)
-                  for (s in page.strokes) {
-                      val rr = r + s.width / 2f
-                      if (!s.locked && nearBounds(s.bounds, x, y, rr) && nearPoly(s.pts, x, y, rr)) changed = true else out.add(s)
-                  }
-                  if (changed) page.strokes = out
-              }
-
-              private fun nearPoly(p: FloatArray, x: Float, y: Float, r: Float): Boolean {
-                  val n = p.size / 2
-                  if (n == 1) return hypot(p[0] - x, p[1] - y) <= r
-                  for (i in 0 until n - 1) {
-                      if (segDist(x, y, p[2 * i], p[2 * i + 1], p[2 * i + 2], p[2 * i + 3]) <= r) return true
-                  }
-                  return false
-              }
-
-              private fun segDist(px: Float, py: Float, ax: Float, ay: Float, bx: Float, by: Float): Float {
-                  val dx = bx - ax
-                  val dy = by - ay
-                  val l2 = dx * dx + dy * dy
-                  var t = if (l2 == 0f) 0f else ((px - ax) * dx + (py - ay) * dy) / l2
-                  t = t.coerceIn(0f, 1f)
-                  return hypot(px - (ax + t * dx), py - (ay + t * dy))
-              }
-
-              private fun eraseArea(x: Float, y: Float, r: Float) {
-                  var changed = false
-                  val out = ArrayList<Stroke>(page.strokes.size + 4)
-                  for (s in page.strokes) {
-                      val rr = r + s.width / 2f
-                      if (s.locked || !nearBounds(s.bounds, x, y, rr)) { out.add(s); continue }
-                      val pieces = cut(s, x, y, rr)
-                      if (pieces == null) out.add(s) else { out.addAll(pieces); changed = true }
-                  }
-                  if (changed) page.strokes = out
-              }
-
-              private fun cut(s: Stroke, x: Float, y: Float, rad: Float): List<Stroke>? {
-                  val p = densify(s.pts, max(rad * 0.45f, 3f * d))
-                  val pieces = ArrayList<Stroke>()
-                  val piece = FL()
-                  var removed = false
-                  fun flush() {
-                      if (piece.n >= 4) pieces.add(Stroke(s.kind, s.color, s.width, piece.toArray(), false))
-                      piece.clear()
-                  }
-                  for (i in 0 until p.size / 2) {
-                      if (hypot(p[2 * i] - x, p[2 * i + 1] - y) < rad) { removed = true; flush() } else piece.add2(p[2 * i], p[2 * i + 1])
-                  }
-                  flush()
-                  return if (removed) pieces else null
-              }
-
-              private fun densify(p: FloatArray, gap: Float): FloatArray {
-                  val out = FL()
-                  val n = p.size / 2
-                  out.add2(p[0], p[1])
-                  for (i in 1 until n) {
-                      val ax = p[2 * i - 2]; val ay = p[2 * i - 1]
-                      val bx = p[2 * i]; val by = p[2 * i + 1]
-                      val seg = hypot(bx - ax, by - ay)
-                      val k = Math.ceil((seg / gap).toDouble()).toInt()
-                      for (j in 1..k) out.add2(ax + (bx - ax) * j / k, ay + (by - ay) * j / k)
-                  }
-                  return out.toArray()
-              }
-
-              // ---- selection
-              private fun selLocked() = sel.isNotEmpty() && sel.all { it.locked }
-
-              fun clearSel() {
-                  sel.clear(); selSet.clear(); selMode = 0
-                  invalidate()
-              }
-
-              private fun updateM() {
-                  selM.reset()
-                  selM.postTranslate(-selBounds.centerX(), -selBounds.centerY())
-                  selM.postScale(sSc, sSc)
-                  selM.postRotate(Math.toDegrees(sAng.toDouble()).toFloat())
-                  selM.postTranslate(sCx, sCy)
-                  selM.invert(selInv)
-                  val pad = 10f * d / sSc
-                  val l = selBounds.left - pad
-                  val t = selBounds.top - pad
-                  val r = selBounds.right + pad
-                  val b = selBounds.bottom + pad
-                  corners = floatArrayOf(l, t, r, t, r, b, l, b)
-                  selM.mapPoints(corners)
-              }
-
-              private fun resetParams() {
-                  var l = Float.MAX_VALUE; var t = Float.MAX_VALUE; var r = -Float.MAX_VALUE; var b = -Float.MAX_VALUE
-                  for (s in sel) {
-                      val bb = s.bounds
-                      l = min(l, bb.left); t = min(t, bb.top); r = max(r, bb.right); b = max(b, bb.bottom)
-                  }
-                  selBounds.set(l, t, r, b)
-                  sCx = selBounds.centerX(); sCy = selBounds.centerY(); sAng = 0f; sSc = 1f
-                  updateM()
-              }
-
-              private fun hitHandle(x: Float, y: Float): Int {
-                  val rad = 26f * d
-                  val q = corners
-                  if (hypot(x - q[2], y - q[3]) < rad) return 1 // rotate
-                  if (hypot(x - q[4], y - q[5]) < rad) return 2 // scale
-                  if (hypot(x - q[0], y - q[1]) < rad) return 3 // lock
-                  return 0
-              }
-
-              private fun insideBox(x: Float, y: Float): Boolean {
-                  val pt = floatArrayOf(x, y)
-                  selInv.mapPoints(pt)
-                  val pad = 10f * d / sSc
-                  return pt[0] >= selBounds.left - pad && pt[0] <= selBounds.right + pad &&
-                      pt[1] >= selBounds.top - pad && pt[1] <= selBounds.bottom + pad
-              }
-
-              private fun selectTouch(a: Int, e: MotionEvent) {
-                  val x = e.x
-                  val y = e.y
-                  when (a) {
-                      MotionEvent.ACTION_DOWN -> {
-                          gesture = 4; selMode = 0
-                          downX = x; downY = y; movedFar = false
-                          if (sel.isNotEmpty()) {
-                              val locked = selLocked()
-                              when (hitHandle(x, y)) {
-                                  1 -> if (locked) selMode = 6 else { selMode = 3; startAng = atan2(y - sCy, x - sCx); ang0 = sAng }
-                                  2 -> if (locked) selMode = 6 else { selMode = 4; dist0 = max(hypot(x - sCx, y - sCy), 1f); sc0 = sSc }
-                                  3 -> selMode = 5
-                                  else -> if (insideBox(x, y)) { selMode = if (locked) 6 else 2; cx0 = sCx; cy0 = sCy }
-                              }
-                          }
-                          if (selMode == 0) {
-                              clearSel(); selMode = 1; lasso.clear(); lasso.add2(x, y)
-                          }
-                          removeCallbacks(longRun)
-                          postDelayed(longRun, 1200)
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_MOVE -> if (gesture == 4) {
-                          if (!movedFar && hypot(x - downX, y - downY) > 10f * d) { movedFar = true; removeCallbacks(longRun) }
-                          when (selMode) {
-                              1 -> lasso.add2(x, y)
-                              2 -> { sCx = cx0 + (x - downX); sCy = cy0 + (y - downY); updateM() }
-                              3 -> { sAng = ang0 + (atan2(y - sCy, x - sCx) - startAng); updateM() }
-                              4 -> { sSc = (sc0 * hypot(x - sCx, y - sCy) / dist0).coerceIn(0.1f, 12f); updateM() }
-                          }
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_UP -> {
-                          removeCallbacks(longRun)
-                          if (gesture == 4) {
-                              when (selMode) {
-                                  1 -> finishLasso()
-                                  2, 3, 4 -> bake()
-                                  5 -> if (hitHandle(x, y) == 3 && !movedFar) toggleLock()
-                              }
-                          }
-                          gesture = 0; selMode = 0; invalidate()
-                      }
-                      MotionEvent.ACTION_CANCEL -> {
-                          removeCallbacks(longRun)
-                          if (selMode in 2..4) { resetParams() }
-                          gesture = 0; selMode = 0; lasso.clear(); invalidate()
-                      }
-                  }
-              }
-
-              private fun inPoly(px: Float, py: Float, poly: FloatArray, n: Int): Boolean {
-                  var inside = false
-                  var j = n - 1
-                  for (i in 0 until n) {
-                      val xi = poly[2 * i]; val yi = poly[2 * i + 1]
-                      val xj = poly[2 * j]; val yj = poly[2 * j + 1]
-                      if ((yi > py) != (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside
-                      j = i
-                  }
-                  return inside
-              }
-
-              private fun finishLasso() {
-                  val n = lasso.n / 2
-                  if (n < 3) { lasso.clear(); return }
-                  val poly = lasso.toArray()
-                  for (s in page.strokes) {
-                      val c = s.count
-                      var inside = 0
-                      for (i in 0 until c) if (inPoly(s.pts[2 * i], s.pts[2 * i + 1], poly, n)) inside++
-                      if (c > 0 && inside * 2 >= c) { sel.add(s); selSet.add(s) }
-                  }
-                  lasso.clear()
-                  if (sel.isNotEmpty()) resetParams()
-              }
-
-              private fun bake() {
-                  val moved = hypot(sCx - selBounds.centerX(), sCy - selBounds.centerY()) > 0.5f ||
-                      Math.abs(sSc - 1f) > 0.001f || Math.abs(sAng) > 0.001f
-                  if (!moved) { resetParams(); return }
-                  val m = Matrix(selM)
-                  val map = IdentityHashMap<Stroke, Stroke>()
-                  for (s in sel) map[s] = s.transformed(m)
-                  val prev = ArrayList(page.strokes)
-                  val out = ArrayList<Stroke>(prev.size)
-                  for (s in prev) out.add(map[s] ?: s)
-                  page.strokes = out
-                  val ns = sel.map { map[it]!! }
-                  sel.clear(); selSet.clear(); sel.addAll(ns); selSet.addAll(ns)
-                  resetParams()
-                  commit(prev)
-              }
-
-              private fun toggleLock() {
-                  if (sel.isEmpty()) return
-                  val lock = !selLocked()
-                  val map = IdentityHashMap<Stroke, Stroke>()
-                  for (s in sel) map[s] = s.withLocked(lock)
-                  val prev = ArrayList(page.strokes)
-                  val out = ArrayList<Stroke>(prev.size)
-                  for (s in prev) out.add(map[s] ?: s)
-                  page.strokes = out
-                  val ns = sel.map { map[it]!! }
-                  sel.clear(); selSet.clear(); sel.addAll(ns); selSet.addAll(ns)
-                  updateM()
-                  commit(prev)
-              }
-
-              // ---- laser
-              private fun laserTouch(a: Int, e: MotionEvent) {
-                  val now = SystemClock.uptimeMillis()
-                  when (a) {
-                      MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                          laserDown = true
-                          for (i in 0 until e.historySize) laser.add(LP(e.getHistoricalX(i), e.getHistoricalY(i), now))
-                          laser.add(LP(e.x, e.y, now))
-                          invalidate()
-                      }
-                      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { laserDown = false; invalidate() }
-                  }
-              }
-
-              // ------------------------------------------------------------------ public actions
-              fun undo() {
-                  val p = page
-                  if (p.undo.isEmpty()) return
-                  val s = p.undo.removeAt(p.undo.size - 1)
-                  p.redo.add(s)
-                  p.strokes = ArrayList(s.before)
-                  clearSel(); onCommit?.invoke(); invalidate()
-              }
-
-              fun redo() {
-                  val p = page
-                  if (p.redo.isEmpty()) return
-                  val s = p.redo.removeAt(p.redo.size - 1)
-                  p.undo.add(s)
-                  p.strokes = ArrayList(s.after)
-                  clearSel(); onCommit?.invoke(); invalidate()
-              }
-
-              fun clearPage() {
-                  if (page.strokes.isEmpty()) return
-                  val prev = ArrayList(page.strokes)
-                  page.strokes = ArrayList()
-                  clearSel()
-                  commit(prev)
-              }
-
-              fun pageChanged() {
-                  clearSel(); cancelGesture(); invalidate()
-              }
-
-              fun renderBitmap(): Bitmap {
-                  val b = Bitmap.createBitmap(max(width, 1), max(height, 1), Bitmap.Config.ARGB_8888)
-                  val c = Canvas(b)
-                  for (s in page.strokes) drawStroke(c, s)
-                  return b
-              }
-          }
-          EOF
-      - name: File app/src/main/java/com/example/screenpen/PanelUi.kt
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/java/com/example/screenpen
-          cat > app/src/main/java/com/example/screenpen/PanelUi.kt <<'EOF'
-          package com.example.screenpen
-
-          import android.content.Context
-          import android.content.res.ColorStateList
-          import android.graphics.Color
-          import android.graphics.Typeface
-          import android.view.Gravity
-          import android.view.View
-          import android.view.ViewGroup
-          import android.widget.LinearLayout
-          import android.widget.SeekBar
-          import android.widget.Switch
-          import android.widget.TextView
-
-          /** Small dark-theme building blocks for the floating panels. */
-          object PUi {
-
-              fun title(c: Context, text: String) = TextView(c).apply {
-                  this.text = text
-                  textSize = 10.5f
-                  letterSpacing = 0.08f
-                  typeface = Typeface.DEFAULT_BOLD
-                  setTextColor(0xFF8A94A8.toInt())
-                  setPadding(0, c.dpi(10), 0, c.dpi(6))
-              }
-
-              fun text(c: Context, text: String, size: Float = 13f, color: Int = C.ON_DARK) = TextView(c).apply {
-                  this.text = text
-                  textSize = size
-                  setTextColor(color)
-              }
-
-              fun hrow(c: Context): LinearLayout = LinearLayout(c).apply {
-                  orientation = LinearLayout.HORIZONTAL
-                  gravity = Gravity.CENTER_VERTICAL
-              }
-
-              fun vcol(c: Context): LinearLayout = LinearLayout(c).apply { orientation = LinearLayout.VERTICAL }
-
-              fun lpW(c: Context, w: Int, h: Int, weight: Float = 0f, margin: Int = 0): LinearLayout.LayoutParams =
-                  LinearLayout.LayoutParams(if (w > 0) c.dpi(w) else w, if (h > 0) c.dpi(h) else h, weight).apply {
-                      val m = c.dpi(margin)
-                      setMargins(m, m, m, m)
-                  }
-
-              fun seg(c: Context, options: List<Pair<String, String>>, current: String, onPick: (String) -> Unit): LinearLayout {
-                  val box = hrow(c)
-                  box.background = roundBg(C.PANEL_ITEM, c.dp(10f))
-                  box.setPadding(c.dpi(3), c.dpi(3), c.dpi(3), c.dpi(3))
-                  val views = ArrayList<TextView>()
-                  fun paint(sel: String) {
-                      for ((i, v) in views.withIndex()) {
-                          val on = options[i].first == sel
-                          v.background = if (on) roundBg(C.ACCENT, c.dp(8f)) else null
-                          v.setTextColor(if (on) Color.WHITE else C.ON_DARK)
-                      }
-                  }
-                  for ((key, label) in options) {
-                      val v = TextView(c).apply {
-                          text = label
-                          textSize = 12.5f
-                          gravity = Gravity.CENTER
-                          setPadding(c.dpi(10), c.dpi(7), c.dpi(10), c.dpi(7))
-                          setOnClickListener { paint(key); onPick(key) }
-                      }
-                      views.add(v)
-                      box.addView(v, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                  }
-                  paint(current)
-                  return box
-              }
-
-              fun slider(c: Context, min: Int, max: Int, value: Int, onChange: (Int) -> Unit): SeekBar = SeekBar(c).apply {
-                  this.max = max - min
-                  progress = (value - min).coerceIn(0, max - min)
-                  progressTintList = ColorStateList.valueOf(C.ACCENT)
-                  thumbTintList = ColorStateList.valueOf(C.ACCENT)
-                  setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                      override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) { if (fromUser) onChange(p + min) }
-                      override fun onStartTrackingTouch(s: SeekBar?) {}
-                      override fun onStopTrackingTouch(s: SeekBar?) {}
-                  })
-              }
-
-              /** Slider with a live preview dot and value label. */
-              fun sizeRow(c: Context, p: Prefs, key: String, min: Int, max: Int, dotColor: Int): LinearLayout {
-                  val row = hrow(c)
-                  val dot = DotView(c, 1, dotColor, p.int(key).toFloat())
-                  val label = text(c, "${p.int(key)}", 12f, 0xFF8A94A8.toInt()).apply { gravity = Gravity.END }
-                  row.addView(dot, lpW(c, 38, 38))
-                  row.addView(slider(c, min, max, p.int(key)) { v ->
-                      p.set(key, v)
-                      dot.value = v.toFloat(); dot.invalidate()
-                      label.text = "$v"
-                  }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                  row.addView(label, lpW(c, 30, ViewGroup.LayoutParams.WRAP_CONTENT))
-                  return row
-              }
-
-              fun switchRow(c: Context, label: String, on: Boolean, onChange: (Boolean) -> Unit): LinearLayout {
-                  val row = hrow(c)
-                  row.addView(text(c, label, 13f), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                  val sw = Switch(c).apply {
-                      isChecked = on
-                      thumbTintList = ColorStateList.valueOf(Color.WHITE)
-                      trackTintList = ColorStateList(
-                          arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                          intArrayOf(C.ACCENT, 0xFF59627A.toInt())
-                      )
-                      setOnCheckedChangeListener { _, v -> onChange(v) }
-                  }
-                  row.addView(sw)
-                  return row
-              }
-
-              fun swatch(c: Context, color: Int, selected: Boolean, size: Int = 28): View = View(c).apply {
-                  background = roundBg(color, c.dp(size / 2f), if (selected) C.ACCENT else 0x44FFFFFF, c.dp(if (selected) 2.5f else 1f))
-                  layoutParams = lpW(c, size, size, 0f, 3)
-              }
-
-              fun pill(c: Context, label: String, accent: Boolean = false, onClick: () -> Unit): TextView = TextView(c).apply {
-                  text = label
-                  textSize = 13f
-                  gravity = Gravity.CENTER
-                  typeface = Typeface.DEFAULT_BOLD
-                  setTextColor(Color.WHITE)
-                  background = roundBg(if (accent) C.ACCENT else C.PANEL_ITEM, c.dp(10f))
-                  setPadding(c.dpi(12), c.dpi(9), c.dpi(12), c.dpi(9))
-                  setOnClickListener { onClick() }
-              }
-
-              fun iconBtn(c: Context, ic: Ic, tint: Int = C.ON_DARK, size: Int = 38, onClick: () -> Unit): IconView =
-                  IconView(c, ic, tint, 2f, 0.56f).apply {
-                      background = roundBg(C.PANEL_ITEM, c.dp(10f))
-                      layoutParams = lpW(c, size, size, 0f, 2)
-                      setOnClickListener { onClick() }
-                  }
-          }
-          EOF
-      - name: File app/src/main/java/com/example/screenpen/Timer.kt
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/java/com/example/screenpen
-          cat > app/src/main/java/com/example/screenpen/Timer.kt <<'EOF'
-          package com.example.screenpen
-
-          import android.graphics.Color
-          import android.graphics.PixelFormat
-          import android.graphics.Typeface
-          import android.media.RingtoneManager
-          import android.os.Handler
-          import android.os.Looper
-          import android.os.SystemClock
-          import android.os.VibrationEffect
-          import android.os.Vibrator
-          import android.view.Gravity
-          import android.view.View
-          import android.view.ViewGroup
-          import android.view.WindowManager
-          import android.widget.FrameLayout
-          import android.widget.LinearLayout
-          import android.widget.TextView
-          import android.widget.Toast
-
-          class TimerOverlay(private val svc: OverlayService) {
-
-              private val p = Prefs.get(svc)
-              private val wm = svc.wm
-              private val h = Handler(Looper.getMainLooper())
-
-              private var root: LinearLayout? = null
-              private var tv: TextView? = null
-              private var nextBtn: IconView? = null
-              private var lp: WindowManager.LayoutParams? = null
-
-              private var state = 0 // 0 idle, 1 running, 2 paused
-              private var acc = 0L
-              private var startAt = 0L
-              private var q = 1
-              private var alerted = false
-
-              private val tick = object : Runnable {
-                  override fun run() {
-                      render()
-                      if (state == 1) h.postDelayed(this, 100)
-                  }
-              }
-
-              val visible: Boolean get() = root != null
-
-              fun toggle() { if (visible) hide() else show() }
-
-              fun show() {
-                  if (root != null) return
-                  val c = svc
-                  val r = LinearLayout(c).apply {
-                      orientation = LinearLayout.HORIZONTAL
-                      gravity = Gravity.CENTER_VERTICAL
-                  }
-                  val t = TextView(c).apply {
-                      typeface = Typeface.DEFAULT_BOLD
-                      fontFeatureSettings = "tnum"
-                      gravity = Gravity.CENTER
-                      includeFontPadding = false
-                  }
-                  val nb = IconView(c, Ic.NEXT, Color.WHITE, 2f, 0.62f).apply {
-                      setOnClickListener { next() }
-                  }
-                  r.addView(t, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-                  r.addView(nb, LinearLayout.LayoutParams(c.dpi(30), c.dpi(30)))
-                  root = r; tv = t; nextBtn = nb
-
-                  val params = WindowManager.LayoutParams(
-                      WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
-                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                      PixelFormat.TRANSLUCENT
-                  ).apply {
-                      gravity = Gravity.TOP or Gravity.START
-                      x = c.dpi(p.int(K.TM_X)); y = c.dpi(p.int(K.TM_Y))
-                  }
-                  lp = params
-                  wm.addView(r, params)
-                  svc.attachDrag(r, params, r, { tap() }, { openPanel() }) {
-                      p.set(K.TM_X, (params.x / c.resources.displayMetrics.density).toInt())
-                      p.set(K.TM_Y, (params.y / c.resources.displayMetrics.density).toInt())
-                  }
-                  p.set(K.TM_ON, true)
-                  applyStyle()
-                  if (state == 1) h.post(tick)
-              }
-
-              fun hide() {
-                  h.removeCallbacks(tick)
-                  root?.let { runCatching { wm.removeView(it) } }
-                  root = null; tv = null; nextBtn = null; lp = null
-                  p.set(K.TM_ON, false)
-                  // timer keeps its state but a hidden timer should not keep running
-                  if (state == 1) { acc = elapsed(); state = 2 }
-              }
-
-              fun destroy() {
-                  h.removeCallbacks(tick)
-                  root?.let { runCatching { wm.removeView(it) } }
-                  root = null
-              }
-
-              fun applyStyle() {
-                  val r = root ?: return
-                  val t = tv ?: return
-                  val c = svc
-                  r.background = roundBg(withAlpha(p.int(K.TM_BG), p.int(K.TM_ALPHA) * 255 / 100), c.dp(16f))
-                  val logOn = p.bool(K.TM_LOG)
-                  nextBtn?.visibility = if (logOn) View.VISIBLE else View.GONE
-                  r.setPadding(c.dpi(10), c.dpi(4), if (logOn) c.dpi(2) else c.dpi(10), c.dpi(4))
-                  val size = p.int(K.TM_SIZE).toFloat()
-                  t.textSize = size
-                  val sample = when (p.str(K.TM_FMT)) { "hms" -> "00:00:00"; "mst" -> "00:00.0"; "s" -> "000"; else -> "00:00" }
-                  val pp = android.graphics.Paint(t.paint)
-                  pp.textSize = t.textSize
-                  t.minWidth = pp.measureText(sample).toInt() + 2
-                  render()
-              }
-
-              private fun elapsed(): Long = if (state == 1) acc + (SystemClock.elapsedRealtime() - startAt) else acc
-
-              private fun target(): Long = p.int(K.TM_SEC) * 1000L
-
-              private fun isDown() = p.str(K.TM_MODE) == "down"
-
-              private fun render() {
-                  val t = tv ?: return
-                  val f = p.str(K.TM_FMT)
-                  val el = elapsed()
-                  var col = p.int(K.TM_TEXT)
-                  val text: String
-                  if (isDown()) {
-                      val tg = target()
-                      val rem = tg - el
-                      if (rem > 0) {
-                          val g = if (f == "mst") 100L else 1000L
-                          text = fmtTime(((rem + g - 1) / g) * g, f)
-                          if (rem <= p.int(K.TM_WARN_AT) * 1000L) col = p.int(K.TM_WARN)
-                      } else {
-                          if (state == 1 && !alerted) { alerted = true; alert() }
-                          col = p.int(K.TM_OVER)
-                          if (p.bool(K.TM_OVERTIME)) {
-                              text = "+" + fmtTime(el - tg, f)
-                          } else {
-                              text = fmtTime(0, f)
-                              if (state == 1) { acc = tg; state = 2 }
-                          }
-                      }
-                  } else {
-                      text = fmtTime(el, f)
-                  }
-                  t.text = text
-                  t.setTextColor(col)
-              }
-
-              private fun alert() {
-                  val mode = p.str(K.TM_ALERT)
-                  if (mode == "vib" || mode == "both") {
-                      runCatching {
-                          val v = svc.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
-                          v.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 220, 120, 220, 120, 420), -1))
-                      }
-                  }
-                  if (mode == "snd" || mode == "both") {
-                      runCatching {
-                          RingtoneManager.getRingtone(svc, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)).play()
-                      }
-                  }
-              }
-
-              private fun start() {
-                  state = 1; startAt = SystemClock.elapsedRealtime()
-                  h.removeCallbacks(tick); h.post(tick)
-              }
-
-              private fun pause() { acc = elapsed(); state = 2; render() }
-
-              private fun tap() {
-                  when (state) {
-                      0 -> { acc = 0; alerted = false; start() }
-                      1 -> pause()
-                      else -> {
-                          if (isDown() && !p.bool(K.TM_OVERTIME) && acc >= target()) { acc = 0; alerted = false }
-                          start()
-                      }
-                  }
-                  refreshPanelIfAny()
-              }
-
-              fun reset(newSession: Boolean) {
-                  h.removeCallbacks(tick)
-                  state = 0; acc = 0; alerted = false
-                  if (newSession) q = 1
-                  render()
-              }
-
-              fun next() {
-                  val el = elapsed()
-                  if (state != 0 && el > 0) {
-                      Store.addLog(svc, q, el, if (isDown()) target() else 0L)
-                      Toast.makeText(svc, "Question $q  ·  ${fmtTime(el, "ms")} saved", Toast.LENGTH_SHORT).show()
-                      q++
-                  }
-                  acc = 0; alerted = false
-                  start()
-              }
-
-              // ------------------------------------------------------------------ panel
-              private var refresh: (() -> Unit)? = null
-
-              private fun refreshPanelIfAny() { refresh?.invoke() }
-
-              private fun openPanel() {
-                  val r = root ?: return
-                  val c = svc.tc
-                  val holder = FrameLayout(c)
-                  holder.minimumWidth = c.dpi(270)
-
-                  fun build(): View {
-                      val col = PUi.vcol(c)
-                      col.addView(PUi.title(c, "MODE"))
-                      col.addView(PUi.seg(c, listOf("down" to "Countdown", "up" to "Stopwatch"), p.str(K.TM_MODE)) {
-                          p.set(K.TM_MODE, it); reset(false); refresh?.invoke()
-                      })
-                      if (isDown()) {
-                          col.addView(PUi.title(c, "TIME PER QUESTION"))
-                          val sec = p.int(K.TM_SEC)
-                          val row = PUi.hrow(c)
-                          row.gravity = Gravity.CENTER
-                          fun stepper(value: Int, label: String, step: Int, onNew: (Int) -> Unit) {
-                              row.addView(PUi.iconBtn(c, Ic.MINUS) { onNew(value - step) })
-                              val tvv = PUi.text(c, String.format("%02d", value), 20f).apply {
-                                  gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
-                              }
-                              row.addView(tvv, PUi.lpW(c, 40, ViewGroup.LayoutParams.WRAP_CONTENT))
-                              row.addView(PUi.iconBtn(c, Ic.PLUS) { onNew(value + step) })
-                              row.addView(PUi.text(c, label, 11f, 0xFF8A94A8.toInt()), PUi.lpW(c, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f, 4))
-                          }
-                          val m = sec / 60
-                          val s = sec % 60
-                          stepper(m, "min", 1) { nv -> p.set(K.TM_SEC, (nv.coerceIn(0, 180) * 60 + s).coerceAtLeast(5)); refresh?.invoke() }
-                          row.addView(View(c), PUi.lpW(c, 8, 1))
-                          stepper(s, "sec", 5) { nv -> p.set(K.TM_SEC, (m * 60 + nv.coerceIn(0, 55)).coerceAtLeast(5)); refresh?.invoke() }
-                          col.addView(row)
-                          val chips = PUi.hrow(c)
-                          for (ps in p.presets().take(5)) {
-                              chips.addView(PUi.pill(c, fmtTime(ps * 1000L, "ms"), ps == sec) {
-                                  p.set(K.TM_SEC, ps); reset(false); refresh?.invoke()
-                              }, PUi.lpW(c, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f, 2))
-                          }
-                          col.addView(PUi.hrow(c).apply { setPadding(0, c.dpi(8), 0, 0); addView(chips) })
-                      }
-                      col.addView(PUi.title(c, "CONTROLS"))
-                      val b = PUi.hrow(c)
-                      val running = state == 1
-                      b.addView(PUi.pill(c, if (running) "Pause" else "Start", true) { tap(); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
-                      b.addView(PUi.pill(c, "Reset") { reset(false); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
-                      col.addView(b)
-                      if (p.bool(K.TM_LOG)) {
-                          val b2 = PUi.hrow(c)
-                          b2.addView(PUi.pill(c, "Next question  ›") { next(); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
-                          b2.addView(PUi.pill(c, "New session") { reset(true); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
-                          col.addView(b2)
-                          col.addView(PUi.text(c, "Next question: question $q", 11f, 0xFF8A94A8.toInt()).apply { setPadding(0, c.dpi(6), 0, 0) })
-                      }
-                      return col
-                  }
-                  refresh = { holder.removeAllViews(); holder.addView(build()) }
-                  holder.addView(build())
-                  svc.showPanel(r, holder) { refresh = null }
-              }
-          }
-          EOF
-      - name: File app/src/main/java/com/example/screenpen/OverlayService.kt
-        run: |
-          mkdir -p ScreenPen && cd ScreenPen
-          mkdir -p app/src/main/java/com/example/screenpen
-          cat > app/src/main/java/com/example/screenpen/OverlayService.kt <<'EOF'
-          package com.example.screenpen
-
-          import android.app.Notification
-          import android.app.NotificationChannel
-          import android.app.NotificationManager
-          import android.app.PendingIntent
-          import android.app.Service
-          import android.content.Context
-          import android.content.Intent
-          import android.content.SharedPreferences
-          import android.content.pm.ServiceInfo
-          import android.graphics.Color
-          import android.graphics.PixelFormat
-          import android.graphics.Point
-          import android.graphics.drawable.Icon
-          import android.os.Build
-          import android.os.Handler
-          import android.os.IBinder
-          import android.os.Looper
-          import android.view.ContextThemeWrapper
-          import android.view.Gravity
-          import android.view.MotionEvent
-          import android.view.View
-          import android.view.ViewConfiguration
-          import android.view.ViewGroup
-          import android.view.WindowManager
-          import android.widget.FrameLayout
-          import android.widget.LinearLayout
-          import android.widget.Toast
-          import kotlin.math.abs
-          import kotlin.math.max
-
-          class OverlayService : Service(), SharedPreferences.OnSharedPreferenceChangeListener {
-
-              companion object {
-                  const val ACTION_STOP = "com.example.screenpen.STOP"
-                  private const val CHANNEL_ID = "screen_pen"
-                  @Volatile var running = false
-              }
-
-              lateinit var wm: WindowManager
-              lateinit var tc: Context
-              private lateinit var p: Prefs
-              private lateinit var doc: Doc
-              private val handler = Handler(Looper.getMainLooper())
-
-              private var dv: DrawView? = null
-              private lateinit var drawParams: WindowManager.LayoutParams
-              private var bar: LinearLayout? = null
-              private lateinit var barParams: WindowManager.LayoutParams
-              private var timer: TimerOverlay? = null
-
-              private var interact = false
-              private var hidden = false
-              private var collapsed = false
-              private var orient = "h"
-              private var lastTool = DrawView.Tool.PEN
-              private var undoView: View? = null
-              private var redoView: View? = null
-
-              private var panelRoot: FrameLayout? = null
-              private var panelDismiss: (() -> Unit)? = null
-
-              override fun onBind(intent: Intent?): IBinder? = null
-
-              override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-                  if (intent?.action == ACTION_STOP) {
-                      stopSelf()
-                      return START_NOT_STICKY
-                  }
-                  if (!running) {
-                      startAsForeground()
-                      setup()
-                      running = true
-                  }
-                  return START_NOT_STICKY
-              }
-
-              private fun startAsForeground() {
-                  val nm = getSystemService(NotificationManager::class.java)
-                  nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, "ScreenPen", NotificationManager.IMPORTANCE_LOW))
-                  val stop = PendingIntent.getService(
-                      this, 0, Intent(this, OverlayService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE
-                  )
-                  val open = PendingIntent.getActivity(this, 1, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-                  val n = Notification.Builder(this, CHANNEL_ID)
-                      .setContentTitle("ScreenPen is on")
-                      .setContentText("Tap to open settings")
-                      .setSmallIcon(android.R.drawable.ic_menu_edit)
-                      .setContentIntent(open)
-                      .setOngoing(true)
-                      .addAction(
-                          Notification.Action.Builder(Icon.createWithResource(this, android.R.drawable.ic_delete), "Stop", stop).build()
-                      )
-                      .build()
-                  if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-                  else startForeground(1, n)
-              }
-
-              // ------------------------------------------------------------------ setup
-              private fun setup() {
-                  wm = getSystemService(WINDOW_SERVICE) as WindowManager
-                  tc = ContextThemeWrapper(this, android.R.style.Theme_Material)
-                  p = Prefs.get(this)
-                  doc = if (p.bool(K.AUTOSAVE)) Store.load(this) else Doc()
-                  orient = if (p.str(K.START_ORIENT) == "last") p.str(K.LAST_ORIENT) else p.str(K.START_ORIENT)
-
-                  val v = DrawView(this)
-                  v.doc = doc
-                  v.onCommit = { scheduleSave(); handler.post { refreshUndo() } }
-                  v.onEraseDone = { if (p.bool(K.ER_AUTO)) handler.post { setTool(lastTool) } }
-                  dv = v
-                  applyDraw()
-                  drawParams = WindowManager.LayoutParams(
-                      WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                          WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                      PixelFormat.TRANSLUCENT
-                  )
-                  wm.addView(v, drawParams)
-
-                  timer = TimerOverlay(this)
-                  if (p.bool(K.TM_ON)) timer?.show()
-
-                  val b = LinearLayout(this)
-                  bar = b
-                  barParams = WindowManager.LayoutParams(
-                      WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
-                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                      PixelFormat.TRANSLUCENT
-                  ).apply {
-                      gravity = Gravity.TOP or Gravity.START
-                      x = dpi(p.int(K.TB_X)); y = dpi(p.int(K.TB_Y))
-                  }
-                  rebuildBar()
-                  wm.addView(b, barParams)
-                  p.sp.registerOnSharedPreferenceChangeListener(this)
-              }
-
-              private fun applyDraw() {
-                  val v = dv ?: return
-                  v.penColor = p.int(K.PEN_COLOR)
-                  v.penW = dp(p.int(K.PEN_W).toFloat())
-                  v.hlW = dp(p.int(K.HL_W).toFloat())
-                  v.erArea = p.str(K.ER_TYPE) == "area"
-                  v.erW = dp(p.int(K.ER_W).toFloat())
-                  v.straighten = p.bool(K.STRAIGHT)
-                  v.palm = p.str(K.PALM)
-              }
-
-              override fun onSharedPreferenceChanged(sp: SharedPreferences?, key: String?) {
-                  if (dv == null || key == null) return
-                  when (key) {
-                      K.PEN_COLOR, K.PEN_W -> { applyDraw(); handler.post { rebuildBar() } }
-                      K.HL_W, K.ER_TYPE, K.ER_W, K.STRAIGHT, K.PALM -> applyDraw()
-                      K.TB_ITEMS, K.TB_SIZE, K.TB_ALPHA, K.TB_COLOR -> handler.post { rebuildBar() }
-                      else -> if (key.startsWith("tm") && key != K.TM_X && key != K.TM_Y && key != K.TM_ON) timer?.applyStyle()
-                  }
-              }
-
-              // ------------------------------------------------------------------ helpers
-              fun screen(): Point {
-                  val pt = Point()
-                  @Suppress("DEPRECATION")
-                  wm.defaultDisplay.getRealSize(pt)
-                  return pt
-              }
-
-              fun attachDrag(
-                  v: View, lp: WindowManager.LayoutParams, root: View,
-                  onTap: () -> Unit, onLong: (() -> Unit)?, onDone: () -> Unit
-              ) {
-                  val slop = ViewConfiguration.get(this).scaledTouchSlop
-                  var dx = 0f; var dy = 0f; var sx = 0; var sy = 0
-                  var moved = false; var longFired = false
-                  val longRun = Runnable { longFired = true; onLong?.invoke() }
-                  v.setOnTouchListener { _, e ->
-                      when (e.actionMasked) {
-                          MotionEvent.ACTION_DOWN -> {
-                              dx = e.rawX; dy = e.rawY; sx = lp.x; sy = lp.y
-                              moved = false; longFired = false
-                              if (onLong != null) handler.postDelayed(longRun, 450)
-                          }
-                          MotionEvent.ACTION_MOVE -> {
-                              if (!moved && (abs(e.rawX - dx) > slop || abs(e.rawY - dy) > slop)) {
-                                  moved = true; handler.removeCallbacks(longRun)
-                              }
-                              if (moved) {
-                                  val s = screen()
-                                  lp.x = (sx + (e.rawX - dx).toInt()).coerceIn(0, max(0, s.x - root.width))
-                                  lp.y = (sy + (e.rawY - dy).toInt()).coerceIn(0, max(0, s.y - root.height))
-                                  runCatching { wm.updateViewLayout(root, lp) }
-                              }
-                          }
-                          MotionEvent.ACTION_UP -> {
-                              handler.removeCallbacks(longRun)
-                              if (moved) onDone() else if (!longFired) onTap()
-                          }
-                          MotionEvent.ACTION_CANCEL -> handler.removeCallbacks(longRun)
-                      }
-                      true
-                  }
-              }
-
-              private val saveRun = Runnable { if (p.bool(K.AUTOSAVE)) Store.saveAsync(this, doc) }
-              private fun scheduleSave() {
-                  handler.removeCallbacks(saveRun)
-                  handler.postDelayed(saveRun, 1500)
-              }
-
-              private fun updateTouchMode() {
-                  val v = dv ?: return
-                  val off = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                  drawParams.flags = if (interact || hidden) drawParams.flags or off else drawParams.flags and off.inv()
-                  runCatching { wm.updateViewLayout(v, drawParams) }
-              }
-
-              private fun setTool(t: DrawView.Tool) {
-                  
+          mkdir -p ScreenPen
+          base64 -d <<'B64' | tar xz -C ScreenPen
+          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
+          B64
+      - name: Build release APK
+        working-directory: ScreenPen
+        run: gradle assembleRelease --no-daemon
+      - name: Build debug APK
+        continue-on-error: true
+        working-directory: ScreenPen
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ScreenPen-APK
+          if-no-files-found: warn
+          path: |
+            ScreenPen/app/build/outputs/apk/release/app-release.apk
+            ScreenPen/app/build/outputs/apk/debug/app-debug.apk
