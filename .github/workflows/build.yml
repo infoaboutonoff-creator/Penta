@@ -1,0 +1,2119 @@
+name: Build ScreenPen APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: File settings.gradle.kts
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          cat > settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "ScreenPen"
+          include(":app")
+          EOF
+      - name: File build.gradle.kts
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          cat > build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.5.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+          }
+          EOF
+      - name: File gradle.properties
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g
+          android.useAndroidX=true
+          EOF
+      - name: File app/build.gradle.kts
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app
+          cat > app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.example.screenpen"
+              compileSdk = 34
+
+              signingConfigs {
+                  create("rel") {
+                      storeFile = file("../rel.jks")
+                      storePassword = "android123"
+                      keyAlias = "key0"
+                      keyPassword = "android123"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.getByName("rel")
+                      isMinifyEnabled = false
+                  }
+                  getByName("debug") {
+                      signingConfig = signingConfigs.getByName("rel")
+                  }
+              }
+
+              defaultConfig {
+                  applicationId = "com.abcstudy.screenpen"
+                  minSdk = 26
+                  targetSdk = 34
+                  versionCode = 2
+                  versionName = "2.0"
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          EOF
+      - name: File app/src/main/AndroidManifest.xml
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.VIBRATE" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="ScreenPen"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTask">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+                  <activity
+                      android:name=".TileActivity"
+                      android:exported="false"
+                      android:excludeFromRecents="true"
+                      android:taskAffinity=""
+                      android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+                  <service
+                      android:name=".OverlayService"
+                      android:exported="false"
+                      android:foregroundServiceType="specialUse">
+                      <property
+                          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                          android:value="screen_annotation" />
+                  </service>
+
+                  <service
+                      android:name=".PenTileService"
+                      android:exported="true"
+                      android:icon="@android:drawable/ic_menu_edit"
+                      android:label="ScreenPen"
+                      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+                      <intent-filter>
+                          <action android:name="android.service.quicksettings.action.QS_TILE" />
+                      </intent-filter>
+                  </service>
+
+              </application>
+          </manifest>
+          EOF
+      - name: File app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_bg" />
+              <foreground android:drawable="@drawable/ic_launcher_fg" />
+          </adaptive-icon>
+          EOF
+      - name: File app/src/main/res/drawable/ic_launcher_bg.xml
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/res/drawable
+          cat > app/src/main/res/drawable/ic_launcher_bg.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#2F6BFF" />
+          </shape>
+          EOF
+      - name: File app/src/main/res/drawable/ic_launcher_fg.xml
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/res/drawable
+          cat > app/src/main/res/drawable/ic_launcher_fg.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M34,74 L37.5,60 L65,32.5 L75.5,43 L48,70.5 Z" />
+              <path
+                  android:fillColor="#00000000"
+                  android:strokeColor="#FFFFFF"
+                  android:strokeWidth="3.5"
+                  android:strokeLineCap="round"
+                  android:pathData="M34,78 C44,84 52,76 62,80 C68,82 72,80 76,78" />
+          </vector>
+          EOF
+      - name: File app/src/main/java/com/example/screenpen/Ui.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/Ui.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.content.Context
+          import android.graphics.Canvas
+          import android.graphics.Color
+          import android.graphics.DashPathEffect
+          import android.graphics.Paint
+          import android.graphics.Path
+          import android.graphics.RectF
+          import android.graphics.drawable.GradientDrawable
+          import android.view.View
+          import kotlin.math.cos
+          import kotlin.math.hypot
+          import kotlin.math.min
+          import kotlin.math.roundToInt
+          import kotlin.math.sin
+
+          object C {
+              val ACCENT = 0xFF2F6BFF.toInt()
+              val BG = 0xFFF3F5F9.toInt()
+              val CARD = 0xFFFFFFFF.toInt()
+              val INK = 0xFF1B2433.toInt()
+              val SUB = 0xFF6B7588.toInt()
+              val LINE = 0xFFE3E8F0.toInt()
+              val DANGER = 0xFFE5484D.toInt()
+              val BAR = 0xFF1E2430.toInt()
+              val PANEL = 0xFF262D3B.toInt()
+              val PANEL_ITEM = 0xFF343C4D.toInt()
+              val ON_DARK = 0xFFE8ECF4.toInt()
+              val PALETTE = intArrayOf(
+                  0xFF111111.toInt(), 0xFFFFFFFF.toInt(), 0xFFE5333A.toInt(), 0xFFFF7A1A.toInt(),
+                  0xFFF5C400.toInt(), 0xFF7ED321.toInt(), 0xFF1A9E4B.toInt(), 0xFF00B8A9.toInt(),
+                  0xFF00B0FF.toInt(), 0xFF2F6BFF.toInt(), 0xFF6C4DFF.toInt(), 0xFFB44DFF.toInt(),
+                  0xFFFF4DA6.toInt(), 0xFF8B5A2B.toInt(), 0xFF7A8699.toInt(), 0xFFFFC8A6.toInt()
+              )
+          }
+
+          fun Context.dp(v: Float): Float = v * resources.displayMetrics.density
+          fun Context.dpi(v: Int): Int = (v * resources.displayMetrics.density).roundToInt()
+
+          fun roundBg(color: Int, radius: Float, stroke: Int = 0, strokeW: Float = 0f): GradientDrawable =
+              GradientDrawable().apply {
+                  setColor(color)
+                  cornerRadius = radius
+                  if (stroke != 0) setStroke(strokeW.roundToInt().coerceAtLeast(1), stroke)
+              }
+
+          fun withAlpha(color: Int, a: Int): Int = (color and 0x00FFFFFF) or (a.coerceIn(0, 255) shl 24)
+
+          enum class Ic {
+              PEN, ERASER, UNDO, REDO, EYE, EYE_OFF, SELECT, ORIENT, HL, SHAPES, PAGES, LASER, TIMER,
+              SAVE, TRASH, CLOSE, CURSOR, LOCK, UNLOCK, RESIZE, BACK, CHEV_R, CHEV_U, CHEV_D, PLUS, MINUS,
+              PLAY, PAUSE, NEXT, RESET, LINE, RECT, OVAL, ARROW, GRIP, CHECK, TOOLBAR
+          }
+
+          object Icons {
+              private val cache = HashMap<Ic, Path>()
+              private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                  style = Paint.Style.STROKE
+                  strokeCap = Paint.Cap.ROUND
+                  strokeJoin = Paint.Join.ROUND
+              }
+              private val dash = DashPathEffect(floatArrayOf(2.4f, 2.4f), 0f)
+
+              fun draw(c: Canvas, ic: Ic, cx: Float, cy: Float, size: Float, color: Int, sw: Float = 1.8f) {
+                  val p = cache.getOrPut(ic) { build(ic) }
+                  paint.color = color
+                  paint.strokeWidth = sw
+                  paint.pathEffect = if (ic == Ic.SELECT) dash else null
+                  c.save()
+                  c.translate(cx - size / 2f, cy - size / 2f)
+                  val s = size / 24f
+                  c.scale(s, s)
+                  if (ic == Ic.REDO) {
+                      c.scale(-1f, 1f)
+                      c.translate(-24f, 0f)
+                  }
+                  c.drawPath(p, paint)
+                  c.restore()
+              }
+
+              private fun Path.pl(vararg v: Float, close: Boolean = false): Path {
+                  moveTo(v[0], v[1])
+                  var i = 2
+                  while (i < v.size) { lineTo(v[i], v[i + 1]); i += 2 }
+                  if (close) close()
+                  return this
+              }
+
+              private fun Path.head(tx: Float, ty: Float, dx: Float, dy: Float, len: Float = 4.5f) {
+                  val l = hypot(dx, dy)
+                  val ux = -dx / l
+                  val uy = -dy / l
+                  for (a in floatArrayOf(0.6f, -0.6f)) {
+                      val ca = cos(a)
+                      val sa = sin(a)
+                      moveTo(tx, ty)
+                      lineTo(tx + (ux * ca - uy * sa) * len, ty + (ux * sa + uy * ca) * len)
+                  }
+              }
+
+              private fun Path.arcArrow(startDeg: Float, sweep: Float) {
+                  addArc(RectF(5f, 5f, 19f, 19f), startDeg, sweep)
+                  val a = Math.toRadians((startDeg + sweep).toDouble())
+                  val ex = 12f + 7f * cos(a).toFloat()
+                  val ey = 12f + 7f * sin(a).toFloat()
+                  head(ex, ey, (-sin(a)).toFloat(), cos(a).toFloat())
+              }
+
+              private fun build(ic: Ic): Path = Path().apply {
+                  when (ic) {
+                      Ic.PEN -> { pl(4f, 20f, 5f, 15f, 16f, 4f, 20f, 8f, 9f, 19f, close = true); pl(14f, 6f, 18f, 10f) }
+                      Ic.ERASER -> { pl(5f, 14f, 14f, 5f, 20f, 11f, 11f, 20f, close = true); pl(9.5f, 9.5f, 15.5f, 15.5f); pl(11f, 20f, 20f, 20f) }
+                      Ic.UNDO, Ic.REDO -> {
+                          pl(9f, 14f, 4f, 9f, 9f, 4f)
+                          moveTo(4f, 9f); lineTo(14f, 9f)
+                          cubicTo(17.5f, 9f, 20f, 11f, 20f, 14f)
+                          cubicTo(20f, 17f, 17.5f, 19f, 14f, 19f)
+                          lineTo(10f, 19f)
+                      }
+                      Ic.EYE, Ic.EYE_OFF -> {
+                          moveTo(2f, 12f)
+                          cubicTo(5f, 6.5f, 8.5f, 5f, 12f, 5f)
+                          cubicTo(15.5f, 5f, 19f, 6.5f, 22f, 12f)
+                          cubicTo(19f, 17.5f, 15.5f, 19f, 12f, 19f)
+                          cubicTo(8.5f, 19f, 5f, 17.5f, 2f, 12f)
+                          close()
+                          addCircle(12f, 12f, 3f, Path.Direction.CW)
+                          if (ic == Ic.EYE_OFF) pl(4f, 20f, 20f, 4f)
+                      }
+                      Ic.SELECT -> addRect(4f, 4f, 20f, 20f, Path.Direction.CW)
+                      Ic.ORIENT -> arcArrow(-50f, 270f)
+                      Ic.RESET -> arcArrow(-60f, 290f)
+                      Ic.HL -> { pl(6f, 15f, 14f, 7f, 18f, 11f, 10f, 19f, close = true); pl(10f, 19f, 4f, 20f, 6f, 15f) }
+                      Ic.SHAPES -> { addRect(3f, 3f, 13f, 13f, Path.Direction.CW); addCircle(15.5f, 15.5f, 5.5f, Path.Direction.CW) }
+                      Ic.PAGES -> { addRect(8f, 3f, 20f, 16f, Path.Direction.CW); pl(4f, 7f, 4f, 21f, 16f, 21f) }
+                      Ic.LASER -> {
+                          addCircle(12f, 12f, 3f, Path.Direction.CW)
+                          for (i in 0 until 8) {
+                              val a = Math.toRadians(i * 45.0)
+                              pl(12f + 6f * cos(a).toFloat(), 12f + 6f * sin(a).toFloat(), 12f + 9.5f * cos(a).toFloat(), 12f + 9.5f * sin(a).toFloat())
+                          }
+                      }
+                      Ic.TIMER -> { addCircle(12f, 12f, 9f, Path.Direction.CW); pl(12f, 7f, 12f, 12f, 15.5f, 14f) }
+                      Ic.SAVE -> { pl(12f, 4f, 12f, 15f); head(12f, 15f, 0f, 1f); pl(5f, 15f, 5f, 19f, 19f, 19f, 19f, 15f) }
+                      Ic.TRASH -> {
+                          pl(4f, 7f, 20f, 7f); pl(9f, 7f, 9f, 4f, 15f, 4f, 15f, 7f)
+                          pl(6f, 7f, 7f, 20f, 17f, 20f, 18f, 7f); pl(10f, 11f, 10f, 16f); pl(14f, 11f, 14f, 16f)
+                      }
+                      Ic.CLOSE -> { pl(6f, 6f, 18f, 18f); pl(18f, 6f, 6f, 18f) }
+                      Ic.CURSOR -> pl(6f, 3f, 6f, 19f, 10.5f, 15f, 14f, 21f, 16.5f, 19.5f, 13f, 14f, 18.5f, 13.5f, close = true)
+                      Ic.LOCK -> {
+                          addRoundRect(RectF(6f, 11f, 18f, 21f), 2f, 2f, Path.Direction.CW)
+                          moveTo(8.5f, 11f); lineTo(8.5f, 8f); arcTo(RectF(8.5f, 4.5f, 15.5f, 11.5f), 180f, 180f, false); lineTo(15.5f, 11f)
+                      }
+                      Ic.UNLOCK -> {
+                          addRoundRect(RectF(6f, 11f, 18f, 21f), 2f, 2f, Path.Direction.CW)
+                          moveTo(8.5f, 11f); lineTo(8.5f, 6f); arcTo(RectF(8.5f, 2.5f, 15.5f, 9.5f), 180f, 180f, false); lineTo(15.5f, 7.5f)
+                      }
+                      Ic.RESIZE -> { pl(6f, 18f, 18f, 6f); head(18f, 6f, 1f, -1f); head(6f, 18f, -1f, 1f) }
+                      Ic.BACK -> pl(15f, 5f, 8f, 12f, 15f, 19f)
+                      Ic.CHEV_R -> pl(9f, 5f, 16f, 12f, 9f, 19f)
+                      Ic.CHEV_U -> pl(5f, 15f, 12f, 8f, 19f, 15f)
+                      Ic.CHEV_D -> pl(5f, 9f, 12f, 16f, 19f, 9f)
+                      Ic.PLUS -> { pl(12f, 5f, 12f, 19f); pl(5f, 12f, 19f, 12f) }
+                      Ic.MINUS -> pl(5f, 12f, 19f, 12f)
+                      Ic.PLAY -> pl(8f, 5f, 19f, 12f, 8f, 19f, close = true)
+                      Ic.PAUSE -> { pl(9f, 5f, 9f, 19f); pl(15f, 5f, 15f, 19f) }
+                      Ic.NEXT -> { pl(6f, 5f, 14f, 12f, 6f, 19f, close = true); pl(18f, 5f, 18f, 19f) }
+                      Ic.LINE -> pl(5f, 19f, 19f, 5f)
+                      Ic.RECT -> addRect(4f, 6f, 20f, 18f, Path.Direction.CW)
+                      Ic.OVAL -> addOval(RectF(3f, 6f, 21f, 18f), Path.Direction.CW)
+                      Ic.ARROW -> { pl(5f, 19f, 19f, 5f); head(19f, 5f, 1f, -1f, 6f) }
+                      Ic.GRIP -> {
+                          for (x in floatArrayOf(9f, 15f)) for (y in floatArrayOf(6f, 12f, 18f)) addCircle(x, y, 1.1f, Path.Direction.CW)
+                      }
+                      Ic.CHECK -> pl(5f, 12f, 10f, 17f, 19f, 7f)
+                      Ic.TOOLBAR -> {
+                          addRoundRect(RectF(3f, 8f, 21f, 16f), 3f, 3f, Path.Direction.CW)
+                          addCircle(8f, 12f, 0.8f, Path.Direction.CW); addCircle(12f, 12f, 0.8f, Path.Direction.CW); addCircle(16f, 12f, 0.8f, Path.Direction.CW)
+                      }
+                  }
+              }
+          }
+
+          class IconView(ctx: Context, var ic: Ic, var tint: Int = Color.WHITE, var sw: Float = 1.8f, var frac: Float = 0.58f) : View(ctx) {
+              override fun onDraw(c: Canvas) {
+                  val s = min(width, height) * frac
+                  Icons.draw(c, ic, width / 2f, height / 2f, s, tint, sw)
+              }
+          }
+
+          /** Round colour swatch (mode 0) or pen-size dot (mode 1). */
+          class DotView(ctx: Context, var mode: Int, var color: Int, var value: Float = 4f, var ring: Int = Color.WHITE) : View(ctx) {
+              private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+              override fun onDraw(c: Canvas) {
+                  val cx = width / 2f
+                  val cy = height / 2f
+                  val r = min(width, height) / 2f
+                  if (mode == 0) {
+                      p.style = Paint.Style.FILL; p.color = color
+                      c.drawCircle(cx, cy, r * 0.46f, p)
+                      p.style = Paint.Style.STROKE; p.strokeWidth = context.dp(1.6f); p.color = ring
+                      c.drawCircle(cx, cy, r * 0.58f, p)
+                  } else {
+                      p.style = Paint.Style.STROKE; p.strokeWidth = context.dp(1.6f); p.color = withAlpha(color, 150)
+                      c.drawCircle(cx, cy, r * 0.58f, p)
+                      p.style = Paint.Style.FILL; p.color = color
+                      val dr = (context.dp(value) / 2f).coerceIn(context.dp(1.5f), r * 0.5f)
+                      c.drawCircle(cx, cy, dr, p)
+                  }
+              }
+          }
+          EOF
+      - name: File app/src/main/java/com/example/screenpen/Prefs.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/Prefs.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.content.Context
+          import android.content.SharedPreferences
+
+          object K {
+              const val PEN_COLOR = "penColor"
+              const val PEN_W = "penW"
+              const val HL_W = "hlW"
+              const val ER_TYPE = "erType"
+              const val ER_W = "erW"
+              const val ER_AUTO = "erAuto"
+              const val STRAIGHT = "straight"
+              const val PALM = "palm"
+              const val FAVS = "favs"
+              const val START_ORIENT = "startOrient"
+              const val LAST_ORIENT = "lastOrient"
+              const val TB_ITEMS = "tbItems"
+              const val TB_SIZE = "tbSize"
+              const val TB_ALPHA = "tbAlpha"
+              const val TB_COLOR = "tbColor"
+              const val TB_X = "tbX"
+              const val TB_Y = "tbY"
+              const val TM_MODE = "tmMode"
+              const val TM_SEC = "tmSec"
+              const val TM_PRESETS = "tmPresets"
+              const val TM_FMT = "tmFmt"
+              const val TM_TEXT = "tmText"
+              const val TM_BG = "tmBg"
+              const val TM_WARN = "tmWarn"
+              const val TM_OVER = "tmOver"
+              const val TM_SIZE = "tmSize"
+              const val TM_ALPHA = "tmAlpha"
+              const val TM_ALERT = "tmAlert"
+              const val TM_WARN_AT = "tmWarnAt"
+              const val TM_OVERTIME = "tmOvertime"
+              const val TM_LOG = "tmLog"
+              const val TM_X = "tmX"
+              const val TM_Y = "tmY"
+              const val TM_ON = "tmOn"
+              const val AUTOSAVE = "autosave"
+          }
+
+          class Item(val id: String, val label: String, val ic: Ic, val desc: String)
+
+          class Prefs private constructor(c: Context) {
+              val sp: SharedPreferences = c.applicationContext.getSharedPreferences("screenpen", Context.MODE_PRIVATE)
+
+              companion object {
+                  @Volatile private var inst: Prefs? = null
+                  fun get(c: Context): Prefs = inst ?: synchronized(this) { inst ?: Prefs(c).also { inst = it } }
+
+                  val DEF: Map<String, Any> = mapOf(
+                      K.PEN_COLOR to 0xFFE5333A.toInt(), K.PEN_W to 4, K.HL_W to 22,
+                      K.ER_TYPE to "area", K.ER_W to 28, K.ER_AUTO to true,
+                      K.STRAIGHT to true, K.PALM to "off",
+                      K.FAVS to "ffe5333a,ff2f6bff,ff1a9e4b,fff5c400,ff111111,ffffffff",
+                      K.START_ORIENT to "h", K.LAST_ORIENT to "h",
+                      K.TB_ITEMS to "", K.TB_SIZE to 40, K.TB_ALPHA to 94, K.TB_COLOR to 0xFF1E2430.toInt(),
+                      K.TB_X to 24, K.TB_Y to 220,
+                      K.TM_MODE to "down", K.TM_SEC to 90, K.TM_PRESETS to "30,60,90,120", K.TM_FMT to "ms",
+                      K.TM_TEXT to 0xFFFFFFFF.toInt(), K.TM_BG to 0xFF1E2430.toInt(),
+                      K.TM_WARN to 0xFFFFB020.toInt(), K.TM_OVER to 0xFFFF4D4F.toInt(),
+                      K.TM_SIZE to 15, K.TM_ALPHA to 92, K.TM_ALERT to "vib", K.TM_WARN_AT to 10,
+                      K.TM_OVERTIME to true, K.TM_LOG to true, K.TM_X to 24, K.TM_Y to 120, K.TM_ON to false,
+                      K.AUTOSAVE to true
+                  )
+
+                  val ITEMS: List<Item> = listOf(
+                      Item("redo", "Redo", Ic.REDO, "Bring back what you undid"),
+                      Item("color", "Colour", Ic.PEN, "Quick colour and thickness panel"),
+                      Item("size", "Pen size", Ic.PEN, "Quick thickness slider"),
+                      Item("hl", "Highlighter", Ic.HL, "Translucent marker"),
+                      Item("shapes", "Shapes", Ic.SHAPES, "Line, rectangle, oval, arrow"),
+                      Item("select", "Select", Ic.SELECT, "Circle ink to move, resize, rotate, lock"),
+                      Item("laser", "Laser pointer", Ic.LASER, "Fading pointer, leaves no ink"),
+                      Item("eye", "Show / hide ink", Ic.EYE, "Hide everything without clearing"),
+                      Item("orient", "Rotate toolbar", Ic.ORIENT, "Switch horizontal and vertical"),
+                      Item("pages", "Pages", Ic.PAGES, "Several pages of ink"),
+                      Item("timer", "Timer", Ic.TIMER, "Floating question timer"),
+                      Item("save", "Save as image", Ic.SAVE, "Transparent PNG of this page"),
+                      Item("clear", "Clear page", Ic.TRASH, "Remove all ink on this page"),
+                      Item("close", "Close pen", Ic.CLOSE, "Stop ScreenPen")
+                  )
+              }
+
+              fun int(k: String): Int = sp.getInt(k, DEF[k] as Int)
+              fun bool(k: String): Boolean = sp.getBoolean(k, DEF[k] as Boolean)
+              fun str(k: String): String = sp.getString(k, DEF[k] as String) ?: (DEF[k] as String)
+
+              fun set(k: String, v: Any) {
+                  val e = sp.edit()
+                  when (v) {
+                      is Int -> e.putInt(k, v)
+                      is Boolean -> e.putBoolean(k, v)
+                      is String -> e.putString(k, v)
+                  }
+                  e.apply()
+              }
+
+              fun enabledItems(): List<Item> =
+                  str(K.TB_ITEMS).split(",").filter { it.isNotBlank() }.mapNotNull { id -> ITEMS.firstOrNull { it.id == id } }
+
+              fun setEnabledItems(ids: List<String>) = set(K.TB_ITEMS, ids.joinToString(","))
+
+              fun favs(): MutableList<Int> =
+                  str(K.FAVS).split(",").mapNotNull { runCatching { java.lang.Long.parseLong(it, 16).toInt() }.getOrNull() }.toMutableList()
+
+              fun setFavs(l: List<Int>) = set(K.FAVS, l.joinToString(",") { Integer.toHexString(it) })
+
+              fun presets(): List<Int> = str(K.TM_PRESETS).split(",").mapNotNull { it.trim().toIntOrNull() }.filter { it > 0 }
+          }
+          EOF
+      - name: File app/src/main/java/com/example/screenpen/Model.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/Model.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.content.ContentValues
+          import android.content.Context
+          import android.graphics.Bitmap
+          import android.graphics.Matrix
+          import android.graphics.Path
+          import android.graphics.RectF
+          import android.os.Build
+          import android.os.Environment
+          import android.provider.MediaStore
+          import org.json.JSONArray
+          import java.io.File
+
+          /** Growable float list. */
+          class FL {
+              var a = FloatArray(64)
+              var n = 0
+              fun add(v: Float) {
+                  if (n == a.size) a = a.copyOf(n * 2)
+                  a[n++] = v
+              }
+              fun add2(x: Float, y: Float) { add(x); add(y) }
+              fun clear() { n = 0 }
+              fun toArray(): FloatArray = a.copyOf(n)
+          }
+
+          /** kind: 0 = pen (smooth), 1 = highlighter (smooth, translucent), 2 = shape / straight lines. */
+          class Stroke(val kind: Int, val color: Int, val width: Float, val pts: FloatArray, val locked: Boolean = false) {
+              val count: Int get() = pts.size / 2
+
+              val path: Path by lazy {
+                  val p = Path()
+                  val n = count
+                  if (n > 0) {
+                      p.moveTo(pts[0], pts[1])
+                      if (n == 1) {
+                          p.lineTo(pts[0] + 0.01f, pts[1])
+                      } else if (kind == 2 || n == 2) {
+                          for (i in 1 until n) p.lineTo(pts[2 * i], pts[2 * i + 1])
+                      } else {
+                          for (i in 1 until n - 1) {
+                              val x = pts[2 * i]
+                              val y = pts[2 * i + 1]
+                              p.quadTo(x, y, (x + pts[2 * i + 2]) / 2f, (y + pts[2 * i + 3]) / 2f)
+                          }
+                          p.lineTo(pts[2 * n - 2], pts[2 * n - 1])
+                      }
+                  }
+                  p
+              }
+
+              val bounds: RectF by lazy {
+                  var l = Float.MAX_VALUE; var t = Float.MAX_VALUE; var r = -Float.MAX_VALUE; var b = -Float.MAX_VALUE
+                  for (i in 0 until count) {
+                      val x = pts[2 * i]; val y = pts[2 * i + 1]
+                      if (x < l) l = x; if (x > r) r = x
+                      if (y < t) t = y; if (y > b) b = y
+                  }
+                  RectF(l, t, r, b)
+              }
+
+              fun withLocked(v: Boolean) = Stroke(kind, color, width, pts, v)
+
+              fun transformed(m: Matrix): Stroke {
+                  val p = pts.copyOf()
+                  m.mapPoints(p)
+                  return Stroke(kind, color, width, p, locked)
+              }
+          }
+
+          class Snap(val before: List<Stroke>, val after: List<Stroke>)
+
+          class Page {
+              var strokes = ArrayList<Stroke>()
+              val undo = ArrayList<Snap>()
+              val redo = ArrayList<Snap>()
+          }
+
+          class Doc {
+              val pages = ArrayList<Page>().apply { add(Page()) }
+              var cur = 0
+              val page: Page get() = pages[cur]
+          }
+
+          object Store {
+              private val lock = Any()
+
+              private fun file(c: Context) = File(c.filesDir, "pages.json")
+
+              fun serialize(doc: Doc): String {
+                  val sb = StringBuilder(4096)
+                  sb.append("{\"cur\":").append(doc.cur).append(",\"pages\":[")
+                  for ((pi, pg) in doc.pages.withIndex()) {
+                      if (pi > 0) sb.append(',')
+                      sb.append('[')
+                      for ((si, s) in pg.strokes.withIndex()) {
+                          if (si > 0) sb.append(',')
+                          sb.append('[').append(s.kind).append(',').append(s.color).append(',').append(s.width).append(',')
+                              .append(if (s.locked) 1 else 0).append(",[")
+                          for (i in s.pts.indices) {
+                              if (i > 0) sb.append(',')
+                              sb.append(Math.round(s.pts[i] * 10f) / 10f)
+                          }
+                          sb.append("]]")
+                      }
+                      sb.append(']')
+                  }
+                  sb.append("]}")
+                  return sb.toString()
+              }
+
+              fun saveAsync(c: Context, doc: Doc) {
+                  val s = serialize(doc)
+                  val f = file(c)
+                  Thread { synchronized(lock) { runCatching { f.writeText(s) } } }.start()
+              }
+
+              fun saveSync(c: Context, doc: Doc) {
+                  val s = serialize(doc)
+                  synchronized(lock) { runCatching { file(c).writeText(s) } }
+              }
+
+              fun deleteSaved(c: Context) {
+                  synchronized(lock) { runCatching { file(c).delete() } }
+              }
+
+              fun load(c: Context): Doc {
+                  val doc = Doc()
+                  runCatching {
+                      val f = file(c)
+                      if (!f.exists()) return doc
+                      val root = org.json.JSONObject(f.readText())
+                      val pages = root.getJSONArray("pages")
+                      doc.pages.clear()
+                      for (i in 0 until pages.length()) {
+                          val pg = Page()
+                          val arr = pages.getJSONArray(i)
+                          for (j in 0 until arr.length()) {
+                              val s = arr.getJSONArray(j)
+                              val pa = s.getJSONArray(4)
+                              val pts = FloatArray(pa.length()) { pa.getDouble(it).toFloat() }
+                              pg.strokes.add(Stroke(s.getInt(0), s.getInt(1), s.getDouble(2).toFloat(), pts, s.getInt(3) == 1))
+                          }
+                          doc.pages.add(pg)
+                      }
+                      if (doc.pages.isEmpty()) doc.pages.add(Page())
+                      doc.cur = root.getInt("cur").coerceIn(0, doc.pages.size - 1)
+                  }.onFailure {
+                      doc.pages.clear(); doc.pages.add(Page()); doc.cur = 0
+                  }
+                  return doc
+              }
+
+              /** Saves a transparent PNG. Returns true on success. */
+              fun exportPng(c: Context, bmp: Bitmap): Boolean {
+                  val name = "ScreenPen_" + System.currentTimeMillis() + ".png"
+                  return runCatching {
+                      if (Build.VERSION.SDK_INT >= 29) {
+                          val v = ContentValues().apply {
+                              put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                              put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                              put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/ScreenPen")
+                          }
+                          val uri = c.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v)!!
+                          c.contentResolver.openOutputStream(uri)!!.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                      } else {
+                          val dir = c.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
+                          File(dir, name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                      }
+                      true
+                  }.getOrDefault(false)
+              }
+
+              // ---- question log: one line per entry "timestamp,question,ms,targetMs" ----
+              private fun logFile(c: Context) = File(c.filesDir, "qlog.txt")
+
+              fun addLog(c: Context, q: Int, ms: Long, target: Long) {
+                  synchronized(lock) {
+                      runCatching {
+                          val f = logFile(c)
+                          f.appendText("${System.currentTimeMillis()},$q,$ms,$target\n")
+                          val lines = f.readLines()
+                          if (lines.size > 400) f.writeText(lines.takeLast(300).joinToString("\n") + "\n")
+                      }
+                  }
+              }
+
+              class LogEntry(val ts: Long, val q: Int, val ms: Long, val target: Long)
+
+              fun readLog(c: Context): List<LogEntry> = synchronized(lock) {
+                  runCatching {
+                      logFile(c).readLines().mapNotNull {
+                          val p = it.split(",")
+                          if (p.size < 4) null else LogEntry(p[0].toLong(), p[1].toInt(), p[2].toLong(), p[3].toLong())
+                      }
+                  }.getOrDefault(emptyList())
+              }
+
+              fun clearLog(c: Context) {
+                  synchronized(lock) { runCatching { logFile(c).delete() } }
+              }
+          }
+
+          fun fmtTime(msIn: Long, f: String): String {
+              val ms = if (msIn < 0) 0 else msIn
+              val totalS = ms / 1000
+              return when (f) {
+                  "hms" -> String.format("%02d:%02d:%02d", totalS / 3600, (totalS % 3600) / 60, totalS % 60)
+                  "mst" -> String.format("%02d:%02d.%d", totalS / 60, totalS % 60, (ms % 1000) / 100)
+                  "s" -> totalS.toString()
+                  else -> String.format("%02d:%02d", totalS / 60, totalS % 60)
+              }
+          }
+          EOF
+      - name: File app/src/main/java/com/example/screenpen/DrawView.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/DrawView.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.content.Context
+          import android.graphics.Bitmap
+          import android.graphics.Canvas
+          import android.graphics.Color
+          import android.graphics.DashPathEffect
+          import android.graphics.Matrix
+          import android.graphics.Paint
+          import android.graphics.Path
+          import android.graphics.RectF
+          import android.os.SystemClock
+          import android.view.MotionEvent
+          import android.view.View
+          import java.util.Collections
+          import java.util.IdentityHashMap
+          import kotlin.math.atan2
+          import kotlin.math.cos
+          import kotlin.math.hypot
+          import kotlin.math.max
+          import kotlin.math.min
+          import kotlin.math.sin
+
+          class DrawView(ctx: Context) : View(ctx) {
+
+              enum class Tool { PEN, HL, ERASER, SELECT, SHAPE, LASER }
+
+              private class LP(val x: Float, val y: Float, val t: Long)
+
+              var doc = Doc()
+              var tool = Tool.PEN
+                  set(v) {
+                      if (field != v) {
+                          field = v
+                          clearSel()
+                          cancelGesture()
+                          invalidate()
+                      }
+                  }
+              var shape = 0 // 0 line, 1 rect, 2 oval, 3 arrow
+              var penColor = Color.RED
+              var penW = 4f
+              var hlW = 22f
+              var erArea = true
+              var erW = 28f
+              var straighten = true
+              var palm = "off"
+              var hidden = false
+                  set(v) { field = v; invalidate() }
+              var onCommit: (() -> Unit)? = null
+              var onEraseDone: (() -> Unit)? = null
+
+              private val d = ctx.resources.displayMetrics.density
+              private val page: Page get() = doc.page
+
+              private val sp = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeJoin = Paint.Join.ROUND }
+              private val fp = Paint(Paint.ANTI_ALIAS_FLAG)
+              private val dash = DashPathEffect(floatArrayOf(14f, 10f), 0f)
+
+              // live gesture
+              private var gesture = 0
+              private var ignoring = false
+              private val cur = FL()
+              private var curPath = Path()
+              private var lastX = 0f
+              private var lastY = 0f
+              private var holdX = 0f
+              private var holdY = 0f
+              private var straight = false
+              private var before: List<Stroke> = emptyList()
+              private var shapePts: FloatArray? = null
+              private var sx0 = 0f
+              private var sy0 = 0f
+              private var erX = 0f
+              private var erY = 0f
+              private var erActive = false
+
+              // selection
+              private val sel = ArrayList<Stroke>()
+              private val selSet: MutableSet<Stroke> = Collections.newSetFromMap(IdentityHashMap())
+              private val selBounds = RectF()
+              private var sCx = 0f
+              private var sCy = 0f
+              private var sAng = 0f
+              private var sSc = 1f
+              private val selM = Matrix()
+              private val selInv = Matrix()
+              private var corners = FloatArray(8)
+              private var selMode = 0 // 1 lasso, 2 move, 3 rotate, 4 scale, 5 lock tap, 6 blocked, 7 ignore
+              private val lasso = FL()
+              private var downX = 0f
+              private var downY = 0f
+              private var cx0 = 0f
+              private var cy0 = 0f
+              private var startAng = 0f
+              private var ang0 = 0f
+              private var dist0 = 1f
+              private var sc0 = 1f
+              private var movedFar = false
+              private val boxPath = Path()
+
+              private val laser = ArrayList<LP>()
+              private var laserDown = false
+
+              private val holdRun = Runnable {
+                  if (gesture == 1 && !straight && cur.n >= 4) {
+                      straight = true
+                      val x0 = cur.a[0]
+                      val y0 = cur.a[1]
+                      cur.clear(); cur.add2(x0, y0); cur.add2(lastX, lastY)
+                      rebuildStraight()
+                      invalidate()
+                  }
+              }
+              private val longRun = Runnable {
+                  if (gesture == 4) {
+                      clearSel(); selMode = 7; lasso.clear(); invalidate()
+                  }
+              }
+
+              val hasUndo: Boolean get() = page.undo.isNotEmpty()
+              val hasRedo: Boolean get() = page.redo.isNotEmpty()
+
+              // ------------------------------------------------------------------ drawing
+              override fun onDraw(c: Canvas) {
+                  if (hidden) return
+                  for (s in page.strokes) if (!selSet.contains(s)) drawStroke(c, s)
+                  if (sel.isNotEmpty()) {
+                      c.save(); c.concat(selM)
+                      for (s in sel) drawStroke(c, s)
+                      c.restore()
+                      drawSelBox(c)
+                  }
+                  when (gesture) {
+                      1 -> {
+                          sp.style = Paint.Style.STROKE
+                          val hl = tool == Tool.HL
+                          sp.strokeWidth = if (hl) hlW else penW
+                          sp.strokeCap = if (hl) Paint.Cap.SQUARE else Paint.Cap.ROUND
+                          sp.color = penColor
+                          if (hl) sp.alpha = 105
+                          c.drawPath(curPath, sp)
+                      }
+                      2 -> shapePts?.let {
+                          sp.strokeWidth = penW; sp.strokeCap = Paint.Cap.ROUND; sp.color = penColor
+                          val p = Path()
+                          p.moveTo(it[0], it[1])
+                          var i = 2
+                          while (i < it.size) { p.lineTo(it[i], it[i + 1]); i += 2 }
+                          c.drawPath(p, sp)
+                      }
+                      4 -> if (selMode == 1 && lasso.n >= 4) {
+                          boxPath.reset()
+                          boxPath.moveTo(lasso.a[0], lasso.a[1])
+                          var i = 2
+                          while (i < lasso.n) { boxPath.lineTo(lasso.a[i], lasso.a[i + 1]); i += 2 }
+                          sp.pathEffect = dash; sp.strokeWidth = 1.6f * d; sp.color = C.ACCENT; sp.strokeCap = Paint.Cap.ROUND
+                          c.drawPath(boxPath, sp)
+                          sp.pathEffect = null
+                      }
+                  }
+                  if (erActive) {
+                      val r = if (erArea) erW / 2f else max(erW / 2f, 6f * d)
+                      fp.style = Paint.Style.FILL; fp.color = 0x33FFFFFF
+                      c.drawCircle(erX, erY, r, fp)
+                      fp.style = Paint.Style.STROKE; fp.strokeWidth = 1.5f * d; fp.color = 0xCC222222.toInt()
+                      c.drawCircle(erX, erY, r, fp)
+                  }
+                  drawLaser(c)
+              }
+
+              private fun drawStroke(c: Canvas, s: Stroke) {
+                  sp.style = Paint.Style.STROKE
+                  sp.strokeWidth = s.width
+                  sp.strokeCap = if (s.kind == 1) Paint.Cap.SQUARE else Paint.Cap.ROUND
+                  sp.color = s.color
+                  if (s.kind == 1) sp.alpha = 105
+                  sp.pathEffect = null
+                  c.drawPath(s.path, sp)
+              }
+
+              private fun drawLaser(c: Canvas) {
+                  if (laser.isEmpty()) return
+                  val now = SystemClock.uptimeMillis()
+                  laser.removeAll { now - it.t > 650 }
+                  for (i in 1 until laser.size) {
+                      val a = laser[i - 1]
+                      val b = laser[i]
+                      val k = 1f - (now - b.t) / 650f
+                      sp.style = Paint.Style.STROKE; sp.pathEffect = null; sp.strokeCap = Paint.Cap.ROUND
+                      sp.color = 0xFFFF2D2D.toInt(); sp.alpha = (200 * k).toInt().coerceIn(0, 255)
+                      sp.strokeWidth = (3f + 5f * k) * d
+                      c.drawLine(a.x, a.y, b.x, b.y, sp)
+                  }
+                  laser.lastOrNull()?.let {
+                      val k = (1f - (now - it.t) / 650f).coerceIn(0f, 1f)
+                      fp.style = Paint.Style.FILL
+                      fp.color = 0xFFFF2D2D.toInt(); fp.alpha = (70 * k).toInt()
+                      c.drawCircle(it.x, it.y, 14f * d, fp)
+                      fp.color = 0xFFFF2D2D.toInt(); fp.alpha = (255 * k).toInt()
+                      c.drawCircle(it.x, it.y, 6f * d, fp)
+                      fp.color = Color.WHITE; fp.alpha = (255 * k).toInt()
+                      c.drawCircle(it.x, it.y, 2.4f * d, fp)
+                  }
+                  if (laser.isNotEmpty()) postInvalidateOnAnimation()
+              }
+
+              private fun drawSelBox(c: Canvas) {
+                  val q = corners
+                  boxPath.reset()
+                  boxPath.moveTo(q[0], q[1]); boxPath.lineTo(q[2], q[3]); boxPath.lineTo(q[4], q[5]); boxPath.lineTo(q[6], q[7]); boxPath.close()
+                  sp.style = Paint.Style.STROKE; sp.strokeWidth = 1.6f * d; sp.color = C.ACCENT; sp.pathEffect = dash
+                  c.drawPath(boxPath, sp)
+                  sp.pathEffect = null
+                  val locked = selLocked()
+                  handle(c, q[0], q[1], if (locked) Ic.LOCK else Ic.UNLOCK, false)
+                  handle(c, q[2], q[3], Ic.ORIENT, locked)
+                  handle(c, q[4], q[5], Ic.RESIZE, locked)
+              }
+
+              private fun handle(c: Canvas, x: Float, y: Float, ic: Ic, dim: Boolean) {
+                  fp.style = Paint.Style.FILL
+                  fp.color = if (dim) 0xFF9AA7BD.toInt() else C.ACCENT
+                  c.drawCircle(x, y, 15f * d, fp)
+                  Icons.draw(c, ic, x, y, 18f * d, Color.WHITE, 2f)
+              }
+
+              // ------------------------------------------------------------------ touch
+              override fun onTouchEvent(e: MotionEvent): Boolean {
+                  if (hidden) return false
+                  val a = e.actionMasked
+                  if (a == MotionEvent.ACTION_DOWN) {
+                      ignoring = false
+                      if (palm == "stylus" && e.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) ignoring = true
+                      if (palm == "palm" && e.getTouchMajor(0) > 110f * d) ignoring = true
+                  }
+                  if (ignoring) {
+                      if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) ignoring = false
+                      return true
+                  }
+                  if (palm != "off" && e.pointerCount > 1) return true
+                  when (tool) {
+                      Tool.PEN, Tool.HL -> penTouch(a, e)
+                      Tool.SHAPE -> shapeTouch(a, e)
+                      Tool.ERASER -> eraseTouch(a, e)
+                      Tool.SELECT -> selectTouch(a, e)
+                      Tool.LASER -> laserTouch(a, e)
+                  }
+                  return true
+              }
+
+              private fun cancelGesture() {
+                  removeCallbacks(holdRun); removeCallbacks(longRun)
+                  gesture = 0; erActive = false; shapePts = null; selMode = 0; laserDown = false
+              }
+
+              private fun commit(prev: List<Stroke>) {
+                  val p = page
+                  p.undo.add(Snap(prev, ArrayList(p.strokes)))
+                  if (p.undo.size > 80) p.undo.removeAt(0)
+                  p.redo.clear()
+                  onCommit?.invoke()
+                  invalidate()
+              }
+
+              // ---- pen / highlighter
+              private fun penTouch(a: Int, e: MotionEvent) {
+                  when (a) {
+                      MotionEvent.ACTION_DOWN -> {
+                          cur.clear(); cur.add2(e.x, e.y)
+                          curPath = Path(); curPath.moveTo(e.x, e.y)
+                          lastX = e.x; lastY = e.y; holdX = e.x; holdY = e.y
+                          straight = false
+                          before = ArrayList(page.strokes)
+                          gesture = 1
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_MOVE -> if (gesture == 1) {
+                          for (i in 0 until e.historySize) addPenPoint(e.getHistoricalX(i), e.getHistoricalY(i))
+                          addPenPoint(e.x, e.y)
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_UP -> finishPen(true)
+                      MotionEvent.ACTION_CANCEL -> finishPen(false)
+                  }
+              }
+
+              private fun addPenPoint(x: Float, y: Float) {
+                  if (straight) {
+                      cur.a[2] = x; cur.a[3] = y
+                      lastX = x; lastY = y
+                      rebuildStraight()
+                      return
+                  }
+                  if (hypot(x - lastX, y - lastY) < 1.2f * d) return
+                  cur.add2(x, y)
+                  curPath.quadTo(lastX, lastY, (x + lastX) / 2f, (y + lastY) / 2f)
+                  lastX = x; lastY = y
+                  if (hypot(x - holdX, y - holdY) > 6f * d) {
+                      holdX = x; holdY = y
+                      removeCallbacks(holdRun)
+                      if (straighten) postDelayed(holdRun, 550)
+                  }
+              }
+
+              private fun rebuildStraight() {
+                  curPath = Path()
+                  curPath.moveTo(cur.a[0], cur.a[1])
+                  curPath.lineTo(cur.a[2], cur.a[3])
+              }
+
+              private fun finishPen(ok: Boolean) {
+                  removeCallbacks(holdRun)
+                  if (gesture != 1) return
+                  gesture = 0
+                  if (ok && cur.n >= 2) {
+                      val hl = tool == Tool.HL
+                      page.strokes.add(Stroke(if (hl) 1 else 0, penColor, if (hl) hlW else penW, cur.toArray()))
+                      commit(before)
+                  }
+                  curPath = Path()
+                  invalidate()
+              }
+
+              // ---- shapes
+              private fun makeShape(kind: Int, x0: Float, y0: Float, x1: Float, y1: Float): FloatArray = when (kind) {
+                  1 -> floatArrayOf(x0, y0, x1, y0, x1, y1, x0, y1, x0, y0)
+                  2 -> {
+                      val cx = (x0 + x1) / 2f
+                      val cy = (y0 + y1) / 2f
+                      val rx = Math.abs(x1 - x0) / 2f
+                      val ry = Math.abs(y1 - y0) / 2f
+                      val n = 48
+                      FloatArray((n + 1) * 2).also {
+                          for (i in 0..n) {
+                              val t = (2.0 * Math.PI * i / n)
+                              it[2 * i] = cx + rx * cos(t).toFloat()
+                              it[2 * i + 1] = cy + ry * sin(t).toFloat()
+                          }
+                      }
+                  }
+                  3 -> {
+                      val ang = atan2(y1 - y0, x1 - x0)
+                      val hl = min(26f * d, hypot(x1 - x0, y1 - y0) * 0.4f)
+                      floatArrayOf(
+                          x0, y0, x1, y1,
+                          x1 - hl * cos(ang - 0.45f), y1 - hl * sin(ang - 0.45f), x1, y1,
+                          x1 - hl * cos(ang + 0.45f), y1 - hl * sin(ang + 0.45f)
+                      )
+                  }
+                  else -> floatArrayOf(x0, y0, x1, y1)
+              }
+
+              private fun shapeTouch(a: Int, e: MotionEvent) {
+                  when (a) {
+                      MotionEvent.ACTION_DOWN -> {
+                          sx0 = e.x; sy0 = e.y
+                          before = ArrayList(page.strokes)
+                          shapePts = makeShape(shape, sx0, sy0, e.x, e.y)
+                          gesture = 2
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_MOVE -> if (gesture == 2) {
+                          shapePts = makeShape(shape, sx0, sy0, e.x, e.y); invalidate()
+                      }
+                      MotionEvent.ACTION_UP -> {
+                          if (gesture == 2 && hypot(e.x - sx0, e.y - sy0) > 6f * d) {
+                              page.strokes.add(Stroke(2, penColor, penW, makeShape(shape, sx0, sy0, e.x, e.y)))
+                              commit(before)
+                          }
+                          gesture = 0; shapePts = null; invalidate()
+                      }
+                      MotionEvent.ACTION_CANCEL -> { gesture = 0; shapePts = null; invalidate() }
+                  }
+              }
+
+              // ---- erasers
+              private fun eraseTouch(a: Int, e: MotionEvent) {
+                  when (a) {
+                      MotionEvent.ACTION_DOWN -> {
+                          before = ArrayList(page.strokes)
+                          gesture = 3; erActive = true
+                          erX = e.x; erY = e.y
+                          eraseAt(erX, erY)
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_MOVE -> if (gesture == 3) {
+                          for (i in 0 until e.historySize) eraseSeg(e.getHistoricalX(i), e.getHistoricalY(i))
+                          eraseSeg(e.x, e.y)
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> if (gesture == 3) {
+                          gesture = 0; erActive = false
+                          val now = page.strokes
+                          val changed = now.size != before.size || now.indices.any { now[it] !== before[it] }
+                          if (changed) commit(before)
+                          invalidate()
+                          onEraseDone?.invoke()
+                      }
+                  }
+              }
+
+              private fun eraseSeg(x: Float, y: Float) {
+                  val r = erW / 2f
+                  val step = max(r * 0.5f, 3f * d)
+                  val dist = hypot(x - erX, y - erY)
+                  val n = Math.ceil((dist / step).toDouble()).toInt().coerceAtLeast(1)
+                  val sx = erX
+                  val sy = erY
+                  for (i in 1..n) eraseAt(sx + (x - sx) * i / n, sy + (y - sy) * i / n)
+                  erX = x; erY = y
+              }
+
+              private fun eraseAt(x: Float, y: Float) {
+                  if (erArea) eraseArea(x, y, erW / 2f) else eraseStroke(x, y, max(erW / 2f, 6f * d))
+              }
+
+              private fun nearBounds(b: RectF, x: Float, y: Float, r: Float) =
+                  x >= b.left - r && x <= b.right + r && y >= b.top - r && y <= b.bottom + r
+
+              private fun eraseStroke(x: Float, y: Float, r: Float) {
+                  var changed = false
+                  val out = ArrayList<Stroke>(page.strokes.size)
+                  for (s in page.strokes) {
+                      val rr = r + s.width / 2f
+                      if (!s.locked && nearBounds(s.bounds, x, y, rr) && nearPoly(s.pts, x, y, rr)) changed = true else out.add(s)
+                  }
+                  if (changed) page.strokes = out
+              }
+
+              private fun nearPoly(p: FloatArray, x: Float, y: Float, r: Float): Boolean {
+                  val n = p.size / 2
+                  if (n == 1) return hypot(p[0] - x, p[1] - y) <= r
+                  for (i in 0 until n - 1) {
+                      if (segDist(x, y, p[2 * i], p[2 * i + 1], p[2 * i + 2], p[2 * i + 3]) <= r) return true
+                  }
+                  return false
+              }
+
+              private fun segDist(px: Float, py: Float, ax: Float, ay: Float, bx: Float, by: Float): Float {
+                  val dx = bx - ax
+                  val dy = by - ay
+                  val l2 = dx * dx + dy * dy
+                  var t = if (l2 == 0f) 0f else ((px - ax) * dx + (py - ay) * dy) / l2
+                  t = t.coerceIn(0f, 1f)
+                  return hypot(px - (ax + t * dx), py - (ay + t * dy))
+              }
+
+              private fun eraseArea(x: Float, y: Float, r: Float) {
+                  var changed = false
+                  val out = ArrayList<Stroke>(page.strokes.size + 4)
+                  for (s in page.strokes) {
+                      val rr = r + s.width / 2f
+                      if (s.locked || !nearBounds(s.bounds, x, y, rr)) { out.add(s); continue }
+                      val pieces = cut(s, x, y, rr)
+                      if (pieces == null) out.add(s) else { out.addAll(pieces); changed = true }
+                  }
+                  if (changed) page.strokes = out
+              }
+
+              private fun cut(s: Stroke, x: Float, y: Float, rad: Float): List<Stroke>? {
+                  val p = densify(s.pts, max(rad * 0.45f, 3f * d))
+                  val pieces = ArrayList<Stroke>()
+                  val piece = FL()
+                  var removed = false
+                  fun flush() {
+                      if (piece.n >= 4) pieces.add(Stroke(s.kind, s.color, s.width, piece.toArray(), false))
+                      piece.clear()
+                  }
+                  for (i in 0 until p.size / 2) {
+                      if (hypot(p[2 * i] - x, p[2 * i + 1] - y) < rad) { removed = true; flush() } else piece.add2(p[2 * i], p[2 * i + 1])
+                  }
+                  flush()
+                  return if (removed) pieces else null
+              }
+
+              private fun densify(p: FloatArray, gap: Float): FloatArray {
+                  val out = FL()
+                  val n = p.size / 2
+                  out.add2(p[0], p[1])
+                  for (i in 1 until n) {
+                      val ax = p[2 * i - 2]; val ay = p[2 * i - 1]
+                      val bx = p[2 * i]; val by = p[2 * i + 1]
+                      val seg = hypot(bx - ax, by - ay)
+                      val k = Math.ceil((seg / gap).toDouble()).toInt()
+                      for (j in 1..k) out.add2(ax + (bx - ax) * j / k, ay + (by - ay) * j / k)
+                  }
+                  return out.toArray()
+              }
+
+              // ---- selection
+              private fun selLocked() = sel.isNotEmpty() && sel.all { it.locked }
+
+              fun clearSel() {
+                  sel.clear(); selSet.clear(); selMode = 0
+                  invalidate()
+              }
+
+              private fun updateM() {
+                  selM.reset()
+                  selM.postTranslate(-selBounds.centerX(), -selBounds.centerY())
+                  selM.postScale(sSc, sSc)
+                  selM.postRotate(Math.toDegrees(sAng.toDouble()).toFloat())
+                  selM.postTranslate(sCx, sCy)
+                  selM.invert(selInv)
+                  val pad = 10f * d / sSc
+                  val l = selBounds.left - pad
+                  val t = selBounds.top - pad
+                  val r = selBounds.right + pad
+                  val b = selBounds.bottom + pad
+                  corners = floatArrayOf(l, t, r, t, r, b, l, b)
+                  selM.mapPoints(corners)
+              }
+
+              private fun resetParams() {
+                  var l = Float.MAX_VALUE; var t = Float.MAX_VALUE; var r = -Float.MAX_VALUE; var b = -Float.MAX_VALUE
+                  for (s in sel) {
+                      val bb = s.bounds
+                      l = min(l, bb.left); t = min(t, bb.top); r = max(r, bb.right); b = max(b, bb.bottom)
+                  }
+                  selBounds.set(l, t, r, b)
+                  sCx = selBounds.centerX(); sCy = selBounds.centerY(); sAng = 0f; sSc = 1f
+                  updateM()
+              }
+
+              private fun hitHandle(x: Float, y: Float): Int {
+                  val rad = 26f * d
+                  val q = corners
+                  if (hypot(x - q[2], y - q[3]) < rad) return 1 // rotate
+                  if (hypot(x - q[4], y - q[5]) < rad) return 2 // scale
+                  if (hypot(x - q[0], y - q[1]) < rad) return 3 // lock
+                  return 0
+              }
+
+              private fun insideBox(x: Float, y: Float): Boolean {
+                  val pt = floatArrayOf(x, y)
+                  selInv.mapPoints(pt)
+                  val pad = 10f * d / sSc
+                  return pt[0] >= selBounds.left - pad && pt[0] <= selBounds.right + pad &&
+                      pt[1] >= selBounds.top - pad && pt[1] <= selBounds.bottom + pad
+              }
+
+              private fun selectTouch(a: Int, e: MotionEvent) {
+                  val x = e.x
+                  val y = e.y
+                  when (a) {
+                      MotionEvent.ACTION_DOWN -> {
+                          gesture = 4; selMode = 0
+                          downX = x; downY = y; movedFar = false
+                          if (sel.isNotEmpty()) {
+                              val locked = selLocked()
+                              when (hitHandle(x, y)) {
+                                  1 -> if (locked) selMode = 6 else { selMode = 3; startAng = atan2(y - sCy, x - sCx); ang0 = sAng }
+                                  2 -> if (locked) selMode = 6 else { selMode = 4; dist0 = max(hypot(x - sCx, y - sCy), 1f); sc0 = sSc }
+                                  3 -> selMode = 5
+                                  else -> if (insideBox(x, y)) { selMode = if (locked) 6 else 2; cx0 = sCx; cy0 = sCy }
+                              }
+                          }
+                          if (selMode == 0) {
+                              clearSel(); selMode = 1; lasso.clear(); lasso.add2(x, y)
+                          }
+                          removeCallbacks(longRun)
+                          postDelayed(longRun, 1200)
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_MOVE -> if (gesture == 4) {
+                          if (!movedFar && hypot(x - downX, y - downY) > 10f * d) { movedFar = true; removeCallbacks(longRun) }
+                          when (selMode) {
+                              1 -> lasso.add2(x, y)
+                              2 -> { sCx = cx0 + (x - downX); sCy = cy0 + (y - downY); updateM() }
+                              3 -> { sAng = ang0 + (atan2(y - sCy, x - sCx) - startAng); updateM() }
+                              4 -> { sSc = (sc0 * hypot(x - sCx, y - sCy) / dist0).coerceIn(0.1f, 12f); updateM() }
+                          }
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_UP -> {
+                          removeCallbacks(longRun)
+                          if (gesture == 4) {
+                              when (selMode) {
+                                  1 -> finishLasso()
+                                  2, 3, 4 -> bake()
+                                  5 -> if (hitHandle(x, y) == 3 && !movedFar) toggleLock()
+                              }
+                          }
+                          gesture = 0; selMode = 0; invalidate()
+                      }
+                      MotionEvent.ACTION_CANCEL -> {
+                          removeCallbacks(longRun)
+                          if (selMode in 2..4) { resetParams() }
+                          gesture = 0; selMode = 0; lasso.clear(); invalidate()
+                      }
+                  }
+              }
+
+              private fun inPoly(px: Float, py: Float, poly: FloatArray, n: Int): Boolean {
+                  var inside = false
+                  var j = n - 1
+                  for (i in 0 until n) {
+                      val xi = poly[2 * i]; val yi = poly[2 * i + 1]
+                      val xj = poly[2 * j]; val yj = poly[2 * j + 1]
+                      if ((yi > py) != (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside
+                      j = i
+                  }
+                  return inside
+              }
+
+              private fun finishLasso() {
+                  val n = lasso.n / 2
+                  if (n < 3) { lasso.clear(); return }
+                  val poly = lasso.toArray()
+                  for (s in page.strokes) {
+                      val c = s.count
+                      var inside = 0
+                      for (i in 0 until c) if (inPoly(s.pts[2 * i], s.pts[2 * i + 1], poly, n)) inside++
+                      if (c > 0 && inside * 2 >= c) { sel.add(s); selSet.add(s) }
+                  }
+                  lasso.clear()
+                  if (sel.isNotEmpty()) resetParams()
+              }
+
+              private fun bake() {
+                  val moved = hypot(sCx - selBounds.centerX(), sCy - selBounds.centerY()) > 0.5f ||
+                      Math.abs(sSc - 1f) > 0.001f || Math.abs(sAng) > 0.001f
+                  if (!moved) { resetParams(); return }
+                  val m = Matrix(selM)
+                  val map = IdentityHashMap<Stroke, Stroke>()
+                  for (s in sel) map[s] = s.transformed(m)
+                  val prev = ArrayList(page.strokes)
+                  val out = ArrayList<Stroke>(prev.size)
+                  for (s in prev) out.add(map[s] ?: s)
+                  page.strokes = out
+                  val ns = sel.map { map[it]!! }
+                  sel.clear(); selSet.clear(); sel.addAll(ns); selSet.addAll(ns)
+                  resetParams()
+                  commit(prev)
+              }
+
+              private fun toggleLock() {
+                  if (sel.isEmpty()) return
+                  val lock = !selLocked()
+                  val map = IdentityHashMap<Stroke, Stroke>()
+                  for (s in sel) map[s] = s.withLocked(lock)
+                  val prev = ArrayList(page.strokes)
+                  val out = ArrayList<Stroke>(prev.size)
+                  for (s in prev) out.add(map[s] ?: s)
+                  page.strokes = out
+                  val ns = sel.map { map[it]!! }
+                  sel.clear(); selSet.clear(); sel.addAll(ns); selSet.addAll(ns)
+                  updateM()
+                  commit(prev)
+              }
+
+              // ---- laser
+              private fun laserTouch(a: Int, e: MotionEvent) {
+                  val now = SystemClock.uptimeMillis()
+                  when (a) {
+                      MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                          laserDown = true
+                          for (i in 0 until e.historySize) laser.add(LP(e.getHistoricalX(i), e.getHistoricalY(i), now))
+                          laser.add(LP(e.x, e.y, now))
+                          invalidate()
+                      }
+                      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { laserDown = false; invalidate() }
+                  }
+              }
+
+              // ------------------------------------------------------------------ public actions
+              fun undo() {
+                  val p = page
+                  if (p.undo.isEmpty()) return
+                  val s = p.undo.removeAt(p.undo.size - 1)
+                  p.redo.add(s)
+                  p.strokes = ArrayList(s.before)
+                  clearSel(); onCommit?.invoke(); invalidate()
+              }
+
+              fun redo() {
+                  val p = page
+                  if (p.redo.isEmpty()) return
+                  val s = p.redo.removeAt(p.redo.size - 1)
+                  p.undo.add(s)
+                  p.strokes = ArrayList(s.after)
+                  clearSel(); onCommit?.invoke(); invalidate()
+              }
+
+              fun clearPage() {
+                  if (page.strokes.isEmpty()) return
+                  val prev = ArrayList(page.strokes)
+                  page.strokes = ArrayList()
+                  clearSel()
+                  commit(prev)
+              }
+
+              fun pageChanged() {
+                  clearSel(); cancelGesture(); invalidate()
+              }
+
+              fun renderBitmap(): Bitmap {
+                  val b = Bitmap.createBitmap(max(width, 1), max(height, 1), Bitmap.Config.ARGB_8888)
+                  val c = Canvas(b)
+                  for (s in page.strokes) drawStroke(c, s)
+                  return b
+              }
+          }
+          EOF
+      - name: File app/src/main/java/com/example/screenpen/PanelUi.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/PanelUi.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.content.Context
+          import android.content.res.ColorStateList
+          import android.graphics.Color
+          import android.graphics.Typeface
+          import android.view.Gravity
+          import android.view.View
+          import android.view.ViewGroup
+          import android.widget.LinearLayout
+          import android.widget.SeekBar
+          import android.widget.Switch
+          import android.widget.TextView
+
+          /** Small dark-theme building blocks for the floating panels. */
+          object PUi {
+
+              fun title(c: Context, text: String) = TextView(c).apply {
+                  this.text = text
+                  textSize = 10.5f
+                  letterSpacing = 0.08f
+                  typeface = Typeface.DEFAULT_BOLD
+                  setTextColor(0xFF8A94A8.toInt())
+                  setPadding(0, c.dpi(10), 0, c.dpi(6))
+              }
+
+              fun text(c: Context, text: String, size: Float = 13f, color: Int = C.ON_DARK) = TextView(c).apply {
+                  this.text = text
+                  textSize = size
+                  setTextColor(color)
+              }
+
+              fun hrow(c: Context): LinearLayout = LinearLayout(c).apply {
+                  orientation = LinearLayout.HORIZONTAL
+                  gravity = Gravity.CENTER_VERTICAL
+              }
+
+              fun vcol(c: Context): LinearLayout = LinearLayout(c).apply { orientation = LinearLayout.VERTICAL }
+
+              fun lpW(c: Context, w: Int, h: Int, weight: Float = 0f, margin: Int = 0): LinearLayout.LayoutParams =
+                  LinearLayout.LayoutParams(if (w > 0) c.dpi(w) else w, if (h > 0) c.dpi(h) else h, weight).apply {
+                      val m = c.dpi(margin)
+                      setMargins(m, m, m, m)
+                  }
+
+              fun seg(c: Context, options: List<Pair<String, String>>, current: String, onPick: (String) -> Unit): LinearLayout {
+                  val box = hrow(c)
+                  box.background = roundBg(C.PANEL_ITEM, c.dp(10f))
+                  box.setPadding(c.dpi(3), c.dpi(3), c.dpi(3), c.dpi(3))
+                  val views = ArrayList<TextView>()
+                  fun paint(sel: String) {
+                      for ((i, v) in views.withIndex()) {
+                          val on = options[i].first == sel
+                          v.background = if (on) roundBg(C.ACCENT, c.dp(8f)) else null
+                          v.setTextColor(if (on) Color.WHITE else C.ON_DARK)
+                      }
+                  }
+                  for ((key, label) in options) {
+                      val v = TextView(c).apply {
+                          text = label
+                          textSize = 12.5f
+                          gravity = Gravity.CENTER
+                          setPadding(c.dpi(10), c.dpi(7), c.dpi(10), c.dpi(7))
+                          setOnClickListener { paint(key); onPick(key) }
+                      }
+                      views.add(v)
+                      box.addView(v, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                  }
+                  paint(current)
+                  return box
+              }
+
+              fun slider(c: Context, min: Int, max: Int, value: Int, onChange: (Int) -> Unit): SeekBar = SeekBar(c).apply {
+                  this.max = max - min
+                  progress = (value - min).coerceIn(0, max - min)
+                  progressTintList = ColorStateList.valueOf(C.ACCENT)
+                  thumbTintList = ColorStateList.valueOf(C.ACCENT)
+                  setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                      override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) { if (fromUser) onChange(p + min) }
+                      override fun onStartTrackingTouch(s: SeekBar?) {}
+                      override fun onStopTrackingTouch(s: SeekBar?) {}
+                  })
+              }
+
+              /** Slider with a live preview dot and value label. */
+              fun sizeRow(c: Context, p: Prefs, key: String, min: Int, max: Int, dotColor: Int): LinearLayout {
+                  val row = hrow(c)
+                  val dot = DotView(c, 1, dotColor, p.int(key).toFloat())
+                  val label = text(c, "${p.int(key)}", 12f, 0xFF8A94A8.toInt()).apply { gravity = Gravity.END }
+                  row.addView(dot, lpW(c, 38, 38))
+                  row.addView(slider(c, min, max, p.int(key)) { v ->
+                      p.set(key, v)
+                      dot.value = v.toFloat(); dot.invalidate()
+                      label.text = "$v"
+                  }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                  row.addView(label, lpW(c, 30, ViewGroup.LayoutParams.WRAP_CONTENT))
+                  return row
+              }
+
+              fun switchRow(c: Context, label: String, on: Boolean, onChange: (Boolean) -> Unit): LinearLayout {
+                  val row = hrow(c)
+                  row.addView(text(c, label, 13f), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                  val sw = Switch(c).apply {
+                      isChecked = on
+                      thumbTintList = ColorStateList.valueOf(Color.WHITE)
+                      trackTintList = ColorStateList(
+                          arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                          intArrayOf(C.ACCENT, 0xFF59627A.toInt())
+                      )
+                      setOnCheckedChangeListener { _, v -> onChange(v) }
+                  }
+                  row.addView(sw)
+                  return row
+              }
+
+              fun swatch(c: Context, color: Int, selected: Boolean, size: Int = 28): View = View(c).apply {
+                  background = roundBg(color, c.dp(size / 2f), if (selected) C.ACCENT else 0x44FFFFFF, c.dp(if (selected) 2.5f else 1f))
+                  layoutParams = lpW(c, size, size, 0f, 3)
+              }
+
+              fun pill(c: Context, label: String, accent: Boolean = false, onClick: () -> Unit): TextView = TextView(c).apply {
+                  text = label
+                  textSize = 13f
+                  gravity = Gravity.CENTER
+                  typeface = Typeface.DEFAULT_BOLD
+                  setTextColor(Color.WHITE)
+                  background = roundBg(if (accent) C.ACCENT else C.PANEL_ITEM, c.dp(10f))
+                  setPadding(c.dpi(12), c.dpi(9), c.dpi(12), c.dpi(9))
+                  setOnClickListener { onClick() }
+              }
+
+              fun iconBtn(c: Context, ic: Ic, tint: Int = C.ON_DARK, size: Int = 38, onClick: () -> Unit): IconView =
+                  IconView(c, ic, tint, 2f, 0.56f).apply {
+                      background = roundBg(C.PANEL_ITEM, c.dp(10f))
+                      layoutParams = lpW(c, size, size, 0f, 2)
+                      setOnClickListener { onClick() }
+                  }
+          }
+          EOF
+      - name: File app/src/main/java/com/example/screenpen/Timer.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/Timer.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.graphics.Color
+          import android.graphics.PixelFormat
+          import android.graphics.Typeface
+          import android.media.RingtoneManager
+          import android.os.Handler
+          import android.os.Looper
+          import android.os.SystemClock
+          import android.os.VibrationEffect
+          import android.os.Vibrator
+          import android.view.Gravity
+          import android.view.View
+          import android.view.ViewGroup
+          import android.view.WindowManager
+          import android.widget.FrameLayout
+          import android.widget.LinearLayout
+          import android.widget.TextView
+          import android.widget.Toast
+
+          class TimerOverlay(private val svc: OverlayService) {
+
+              private val p = Prefs.get(svc)
+              private val wm = svc.wm
+              private val h = Handler(Looper.getMainLooper())
+
+              private var root: LinearLayout? = null
+              private var tv: TextView? = null
+              private var nextBtn: IconView? = null
+              private var lp: WindowManager.LayoutParams? = null
+
+              private var state = 0 // 0 idle, 1 running, 2 paused
+              private var acc = 0L
+              private var startAt = 0L
+              private var q = 1
+              private var alerted = false
+
+              private val tick = object : Runnable {
+                  override fun run() {
+                      render()
+                      if (state == 1) h.postDelayed(this, 100)
+                  }
+              }
+
+              val visible: Boolean get() = root != null
+
+              fun toggle() { if (visible) hide() else show() }
+
+              fun show() {
+                  if (root != null) return
+                  val c = svc
+                  val r = LinearLayout(c).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
+                  }
+                  val t = TextView(c).apply {
+                      typeface = Typeface.DEFAULT_BOLD
+                      fontFeatureSettings = "tnum"
+                      gravity = Gravity.CENTER
+                      includeFontPadding = false
+                  }
+                  val nb = IconView(c, Ic.NEXT, Color.WHITE, 2f, 0.62f).apply {
+                      setOnClickListener { next() }
+                  }
+                  r.addView(t, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                  r.addView(nb, LinearLayout.LayoutParams(c.dpi(30), c.dpi(30)))
+                  root = r; tv = t; nextBtn = nb
+
+                  val params = WindowManager.LayoutParams(
+                      WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                      PixelFormat.TRANSLUCENT
+                  ).apply {
+                      gravity = Gravity.TOP or Gravity.START
+                      x = c.dpi(p.int(K.TM_X)); y = c.dpi(p.int(K.TM_Y))
+                  }
+                  lp = params
+                  wm.addView(r, params)
+                  svc.attachDrag(r, params, r, { tap() }, { openPanel() }) {
+                      p.set(K.TM_X, (params.x / c.resources.displayMetrics.density).toInt())
+                      p.set(K.TM_Y, (params.y / c.resources.displayMetrics.density).toInt())
+                  }
+                  p.set(K.TM_ON, true)
+                  applyStyle()
+                  if (state == 1) h.post(tick)
+              }
+
+              fun hide() {
+                  h.removeCallbacks(tick)
+                  root?.let { runCatching { wm.removeView(it) } }
+                  root = null; tv = null; nextBtn = null; lp = null
+                  p.set(K.TM_ON, false)
+                  // timer keeps its state but a hidden timer should not keep running
+                  if (state == 1) { acc = elapsed(); state = 2 }
+              }
+
+              fun destroy() {
+                  h.removeCallbacks(tick)
+                  root?.let { runCatching { wm.removeView(it) } }
+                  root = null
+              }
+
+              fun applyStyle() {
+                  val r = root ?: return
+                  val t = tv ?: return
+                  val c = svc
+                  r.background = roundBg(withAlpha(p.int(K.TM_BG), p.int(K.TM_ALPHA) * 255 / 100), c.dp(16f))
+                  val logOn = p.bool(K.TM_LOG)
+                  nextBtn?.visibility = if (logOn) View.VISIBLE else View.GONE
+                  r.setPadding(c.dpi(10), c.dpi(4), if (logOn) c.dpi(2) else c.dpi(10), c.dpi(4))
+                  val size = p.int(K.TM_SIZE).toFloat()
+                  t.textSize = size
+                  val sample = when (p.str(K.TM_FMT)) { "hms" -> "00:00:00"; "mst" -> "00:00.0"; "s" -> "000"; else -> "00:00" }
+                  val pp = android.graphics.Paint(t.paint)
+                  pp.textSize = t.textSize
+                  t.minWidth = pp.measureText(sample).toInt() + 2
+                  render()
+              }
+
+              private fun elapsed(): Long = if (state == 1) acc + (SystemClock.elapsedRealtime() - startAt) else acc
+
+              private fun target(): Long = p.int(K.TM_SEC) * 1000L
+
+              private fun isDown() = p.str(K.TM_MODE) == "down"
+
+              private fun render() {
+                  val t = tv ?: return
+                  val f = p.str(K.TM_FMT)
+                  val el = elapsed()
+                  var col = p.int(K.TM_TEXT)
+                  val text: String
+                  if (isDown()) {
+                      val tg = target()
+                      val rem = tg - el
+                      if (rem > 0) {
+                          val g = if (f == "mst") 100L else 1000L
+                          text = fmtTime(((rem + g - 1) / g) * g, f)
+                          if (rem <= p.int(K.TM_WARN_AT) * 1000L) col = p.int(K.TM_WARN)
+                      } else {
+                          if (state == 1 && !alerted) { alerted = true; alert() }
+                          col = p.int(K.TM_OVER)
+                          if (p.bool(K.TM_OVERTIME)) {
+                              text = "+" + fmtTime(el - tg, f)
+                          } else {
+                              text = fmtTime(0, f)
+                              if (state == 1) { acc = tg; state = 2 }
+                          }
+                      }
+                  } else {
+                      text = fmtTime(el, f)
+                  }
+                  t.text = text
+                  t.setTextColor(col)
+              }
+
+              private fun alert() {
+                  val mode = p.str(K.TM_ALERT)
+                  if (mode == "vib" || mode == "both") {
+                      runCatching {
+                          val v = svc.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
+                          v.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 220, 120, 220, 120, 420), -1))
+                      }
+                  }
+                  if (mode == "snd" || mode == "both") {
+                      runCatching {
+                          RingtoneManager.getRingtone(svc, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)).play()
+                      }
+                  }
+              }
+
+              private fun start() {
+                  state = 1; startAt = SystemClock.elapsedRealtime()
+                  h.removeCallbacks(tick); h.post(tick)
+              }
+
+              private fun pause() { acc = elapsed(); state = 2; render() }
+
+              private fun tap() {
+                  when (state) {
+                      0 -> { acc = 0; alerted = false; start() }
+                      1 -> pause()
+                      else -> {
+                          if (isDown() && !p.bool(K.TM_OVERTIME) && acc >= target()) { acc = 0; alerted = false }
+                          start()
+                      }
+                  }
+                  refreshPanelIfAny()
+              }
+
+              fun reset(newSession: Boolean) {
+                  h.removeCallbacks(tick)
+                  state = 0; acc = 0; alerted = false
+                  if (newSession) q = 1
+                  render()
+              }
+
+              fun next() {
+                  val el = elapsed()
+                  if (state != 0 && el > 0) {
+                      Store.addLog(svc, q, el, if (isDown()) target() else 0L)
+                      Toast.makeText(svc, "Question $q  ·  ${fmtTime(el, "ms")} saved", Toast.LENGTH_SHORT).show()
+                      q++
+                  }
+                  acc = 0; alerted = false
+                  start()
+              }
+
+              // ------------------------------------------------------------------ panel
+              private var refresh: (() -> Unit)? = null
+
+              private fun refreshPanelIfAny() { refresh?.invoke() }
+
+              private fun openPanel() {
+                  val r = root ?: return
+                  val c = svc.tc
+                  val holder = FrameLayout(c)
+                  holder.minimumWidth = c.dpi(270)
+
+                  fun build(): View {
+                      val col = PUi.vcol(c)
+                      col.addView(PUi.title(c, "MODE"))
+                      col.addView(PUi.seg(c, listOf("down" to "Countdown", "up" to "Stopwatch"), p.str(K.TM_MODE)) {
+                          p.set(K.TM_MODE, it); reset(false); refresh?.invoke()
+                      })
+                      if (isDown()) {
+                          col.addView(PUi.title(c, "TIME PER QUESTION"))
+                          val sec = p.int(K.TM_SEC)
+                          val row = PUi.hrow(c)
+                          row.gravity = Gravity.CENTER
+                          fun stepper(value: Int, label: String, step: Int, onNew: (Int) -> Unit) {
+                              row.addView(PUi.iconBtn(c, Ic.MINUS) { onNew(value - step) })
+                              val tvv = PUi.text(c, String.format("%02d", value), 20f).apply {
+                                  gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+                              }
+                              row.addView(tvv, PUi.lpW(c, 40, ViewGroup.LayoutParams.WRAP_CONTENT))
+                              row.addView(PUi.iconBtn(c, Ic.PLUS) { onNew(value + step) })
+                              row.addView(PUi.text(c, label, 11f, 0xFF8A94A8.toInt()), PUi.lpW(c, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f, 4))
+                          }
+                          val m = sec / 60
+                          val s = sec % 60
+                          stepper(m, "min", 1) { nv -> p.set(K.TM_SEC, (nv.coerceIn(0, 180) * 60 + s).coerceAtLeast(5)); refresh?.invoke() }
+                          row.addView(View(c), PUi.lpW(c, 8, 1))
+                          stepper(s, "sec", 5) { nv -> p.set(K.TM_SEC, (m * 60 + nv.coerceIn(0, 55)).coerceAtLeast(5)); refresh?.invoke() }
+                          col.addView(row)
+                          val chips = PUi.hrow(c)
+                          for (ps in p.presets().take(5)) {
+                              chips.addView(PUi.pill(c, fmtTime(ps * 1000L, "ms"), ps == sec) {
+                                  p.set(K.TM_SEC, ps); reset(false); refresh?.invoke()
+                              }, PUi.lpW(c, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f, 2))
+                          }
+                          col.addView(PUi.hrow(c).apply { setPadding(0, c.dpi(8), 0, 0); addView(chips) })
+                      }
+                      col.addView(PUi.title(c, "CONTROLS"))
+                      val b = PUi.hrow(c)
+                      val running = state == 1
+                      b.addView(PUi.pill(c, if (running) "Pause" else "Start", true) { tap(); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
+                      b.addView(PUi.pill(c, "Reset") { reset(false); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
+                      col.addView(b)
+                      if (p.bool(K.TM_LOG)) {
+                          val b2 = PUi.hrow(c)
+                          b2.addView(PUi.pill(c, "Next question  ›") { next(); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
+                          b2.addView(PUi.pill(c, "New session") { reset(true); refresh?.invoke() }, PUi.lpW(c, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
+                          col.addView(b2)
+                          col.addView(PUi.text(c, "Next question: question $q", 11f, 0xFF8A94A8.toInt()).apply { setPadding(0, c.dpi(6), 0, 0) })
+                      }
+                      return col
+                  }
+                  refresh = { holder.removeAllViews(); holder.addView(build()) }
+                  holder.addView(build())
+                  svc.showPanel(r, holder) { refresh = null }
+              }
+          }
+          EOF
+      - name: File app/src/main/java/com/example/screenpen/OverlayService.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/OverlayService.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.app.Notification
+          import android.app.NotificationChannel
+          import android.app.NotificationManager
+          import android.app.PendingIntent
+          import android.app.Service
+          import android.content.Context
+          import android.content.Intent
+          import android.content.SharedPreferences
+          import android.content.pm.ServiceInfo
+          import android.graphics.Color
+          import android.graphics.PixelFormat
+          import android.graphics.Point
+          import android.graphics.drawable.Icon
+          import android.os.Build
+          import android.os.Handler
+          import android.os.IBinder
+          import android.os.Looper
+          import android.view.ContextThemeWrapper
+          import android.view.Gravity
+          import android.view.MotionEvent
+          import android.view.View
+          import android.view.ViewConfiguration
+          import android.view.ViewGroup
+          import android.view.WindowManager
+          import android.widget.FrameLayout
+          import android.widget.LinearLayout
+          import android.widget.Toast
+          import kotlin.math.abs
+          import kotlin.math.max
+
+          class OverlayService : Service(), SharedPreferences.OnSharedPreferenceChangeListener {
+
+              companion object {
+                  const val ACTION_STOP = "com.example.screenpen.STOP"
+                  private const val CHANNEL_ID = "screen_pen"
+                  @Volatile var running = false
+              }
+
+              lateinit var wm: WindowManager
+              lateinit var tc: Context
+              private lateinit var p: Prefs
+              private lateinit var doc: Doc
+              private val handler = Handler(Looper.getMainLooper())
+
+              private var dv: DrawView? = null
+              private lateinit var drawParams: WindowManager.LayoutParams
+              private var bar: LinearLayout? = null
+              private lateinit var barParams: WindowManager.LayoutParams
+              private var timer: TimerOverlay? = null
+
+              private var interact = false
+              private var hidden = false
+              private var collapsed = false
+              private var orient = "h"
+              private var lastTool = DrawView.Tool.PEN
+              private var undoView: View? = null
+              private var redoView: View? = null
+
+              private var panelRoot: FrameLayout? = null
+              private var panelDismiss: (() -> Unit)? = null
+
+              override fun onBind(intent: Intent?): IBinder? = null
+
+              override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+                  if (intent?.action == ACTION_STOP) {
+                      stopSelf()
+                      return START_NOT_STICKY
+                  }
+                  if (!running) {
+                      startAsForeground()
+                      setup()
+                      running = true
+                  }
+                  return START_NOT_STICKY
+              }
+
+              private fun startAsForeground() {
+                  val nm = getSystemService(NotificationManager::class.java)
+                  nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, "ScreenPen", NotificationManager.IMPORTANCE_LOW))
+                  val stop = PendingIntent.getService(
+                      this, 0, Intent(this, OverlayService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE
+                  )
+                  val open = PendingIntent.getActivity(this, 1, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+                  val n = Notification.Builder(this, CHANNEL_ID)
+                      .setContentTitle("ScreenPen is on")
+                      .setContentText("Tap to open settings")
+                      .setSmallIcon(android.R.drawable.ic_menu_edit)
+                      .setContentIntent(open)
+                      .setOngoing(true)
+                      .addAction(
+                          Notification.Action.Builder(Icon.createWithResource(this, android.R.drawable.ic_delete), "Stop", stop).build()
+                      )
+                      .build()
+                  if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                  else startForeground(1, n)
+              }
+
+              // ------------------------------------------------------------------ setup
+              private fun setup() {
+                  wm = getSystemService(WINDOW_SERVICE) as WindowManager
+                  tc = ContextThemeWrapper(this, android.R.style.Theme_Material)
+                  p = Prefs.get(this)
+                  doc = if (p.bool(K.AUTOSAVE)) Store.load(this) else Doc()
+                  orient = if (p.str(K.START_ORIENT) == "last") p.str(K.LAST_ORIENT) else p.str(K.START_ORIENT)
+
+                  val v = DrawView(this)
+                  v.doc = doc
+                  v.onCommit = { scheduleSave(); handler.post { refreshUndo() } }
+                  v.onEraseDone = { if (p.bool(K.ER_AUTO)) handler.post { setTool(lastTool) } }
+                  dv = v
+                  applyDraw()
+                  drawParams = WindowManager.LayoutParams(
+                      WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                          WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                      PixelFormat.TRANSLUCENT
+                  )
+                  wm.addView(v, drawParams)
+
+                  timer = TimerOverlay(this)
+                  if (p.bool(K.TM_ON)) timer?.show()
+
+                  val b = LinearLayout(this)
+                  bar = b
+                  barParams = WindowManager.LayoutParams(
+                      WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                      PixelFormat.TRANSLUCENT
+                  ).apply {
+                      gravity = Gravity.TOP or Gravity.START
+                      x = dpi(p.int(K.TB_X)); y = dpi(p.int(K.TB_Y))
+                  }
+                  rebuildBar()
+                  wm.addView(b, barParams)
+                  p.sp.registerOnSharedPreferenceChangeListener(this)
+              }
+
+              private fun applyDraw() {
+                  val v = dv ?: return
+                  v.penColor = p.int(K.PEN_COLOR)
+                  v.penW = dp(p.int(K.PEN_W).toFloat())
+                  v.hlW = dp(p.int(K.HL_W).toFloat())
+                  v.erArea = p.str(K.ER_TYPE) == "area"
+                  v.erW = dp(p.int(K.ER_W).toFloat())
+                  v.straighten = p.bool(K.STRAIGHT)
+                  v.palm = p.str(K.PALM)
+              }
+
+              override fun onSharedPreferenceChanged(sp: SharedPreferences?, key: String?) {
+                  if (dv == null || key == null) return
+                  when (key) {
+                      K.PEN_COLOR, K.PEN_W -> { applyDraw(); handler.post { rebuildBar() } }
+                      K.HL_W, K.ER_TYPE, K.ER_W, K.STRAIGHT, K.PALM -> applyDraw()
+                      K.TB_ITEMS, K.TB_SIZE, K.TB_ALPHA, K.TB_COLOR -> handler.post { rebuildBar() }
+                      else -> if (key.startsWith("tm") && key != K.TM_X && key != K.TM_Y && key != K.TM_ON) timer?.applyStyle()
+                  }
+              }
+
+              // ------------------------------------------------------------------ helpers
+              fun screen(): Point {
+                  val pt = Point()
+                  @Suppress("DEPRECATION")
+                  wm.defaultDisplay.getRealSize(pt)
+                  return pt
+              }
+
+              fun attachDrag(
+                  v: View, lp: WindowManager.LayoutParams, root: View,
+                  onTap: () -> Unit, onLong: (() -> Unit)?, onDone: () -> Unit
+              ) {
+                  val slop = ViewConfiguration.get(this).scaledTouchSlop
+                  var dx = 0f; var dy = 0f; var sx = 0; var sy = 0
+                  var moved = false; var longFired = false
+                  val longRun = Runnable { longFired = true; onLong?.invoke() }
+                  v.setOnTouchListener { _, e ->
+                      when (e.actionMasked) {
+                          MotionEvent.ACTION_DOWN -> {
+                              dx = e.rawX; dy = e.rawY; sx = lp.x; sy = lp.y
+                              moved = false; longFired = false
+                              if (onLong != null) handler.postDelayed(longRun, 450)
+                          }
+                          MotionEvent.ACTION_MOVE -> {
+                              if (!moved && (abs(e.rawX - dx) > slop || abs(e.rawY - dy) > slop)) {
+                                  moved = true; handler.removeCallbacks(longRun)
+                              }
+                              if (moved) {
+                                  val s = screen()
+                                  lp.x = (sx + (e.rawX - dx).toInt()).coerceIn(0, max(0, s.x - root.width))
+                                  lp.y = (sy + (e.rawY - dy).toInt()).coerceIn(0, max(0, s.y - root.height))
+                                  runCatching { wm.updateViewLayout(root, lp) }
+                              }
+                          }
+                          MotionEvent.ACTION_UP -> {
+                              handler.removeCallbacks(longRun)
+                              if (moved) onDone() else if (!longFired) onTap()
+                          }
+                          MotionEvent.ACTION_CANCEL -> handler.removeCallbacks(longRun)
+                      }
+                      true
+                  }
+              }
+
+              private val saveRun = Runnable { if (p.bool(K.AUTOSAVE)) Store.saveAsync(this, doc) }
+              private fun scheduleSave() {
+                  handler.removeCallbacks(saveRun)
+                  handler.postDelayed(saveRun, 1500)
+              }
+
+              private fun updateTouchMode() {
+                  val v = dv ?: return
+                  val off = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                  drawParams.flags = if (interact || hidden) drawParams.flags or off else drawParams.flags and off.inv()
+                  runCatching { wm.updateViewLayout(v, drawParams) }
+              }
+
+              private fun setTool(t: DrawView.Tool) {
+                  
