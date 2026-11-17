@@ -419,8 +419,11 @@ jobs:
           }
 
           class IconView(ctx: Context, var ic: Ic, var tint: Int = Color.WHITE, var sw: Float = 1.8f, var frac: Float = 0.58f) : View(ctx) {
+              /** When not 0, a thicker line in this colour is drawn first, so the icon stays readable with no background. */
+              var outline = 0
               override fun onDraw(c: Canvas) {
                   val s = min(width, height) * frac
+                  if (outline != 0) Icons.draw(c, ic, width / 2f, height / 2f, s, outline, sw + 3.2f)
                   Icons.draw(c, ic, width / 2f, height / 2f, s, tint, sw)
               }
           }
@@ -618,6 +621,8 @@ jobs:
               const val TM_VIB_STR = "tmVibStr"
               const val TM_SHOW_RESET = "tmShowReset"
               const val THEME = "theme"
+              const val PG_X = "pgX"
+              const val PG_Y = "pgY"
           }
 
           class Item(val id: String, val label: String, val ic: Ic, val desc: String)
@@ -645,7 +650,8 @@ jobs:
                       K.AUTOSAVE to true,
                       K.TB_DIR to "down", K.TB_FX to true, K.TB_VIB to true, K.TB_VIB_STR to 3,
                       K.TM_FX to true, K.TM_VIB to true, K.TM_VIB_STR to 3, K.TM_SHOW_RESET to true,
-                      K.THEME to "light"
+                      K.THEME to "light",
+                      K.PG_X to 24, K.PG_Y to 330
                   )
 
                   val ITEMS: List<Item> = listOf(
@@ -658,7 +664,7 @@ jobs:
                       Item("laser", "Laser pointer", Ic.LASER, "Fading pointer, leaves no ink"),
                       Item("eye", "Show / hide ink", Ic.EYE, "Hide everything without clearing"),
                       Item("orient", "Rotate toolbar", Ic.ORIENT, "Switch horizontal and vertical"),
-                      Item("pages", "Pages", Ic.PAGES, "Several pages of ink"),
+                      Item("pages", "Pages", Ic.PAGES, "Floating page bar: previous, next, new, delete"),
                       Item("timer", "Timer", Ic.TIMER, "Floating question timer"),
                       Item("save", "Save as image", Ic.SAVE, "Transparent PNG of this page"),
                       Item("clear", "Clear page", Ic.TRASH, "Remove all ink on this page"),
@@ -2149,8 +2155,8 @@ jobs:
                       Toast.makeText(svc, "Question $q  ·  ${fmtTime(el, "ms")} saved", Toast.LENGTH_SHORT).show()
                       q++
                   }
-                  acc = 0; alerted = false
-                  start()
+                  // back to the start value and stopped: the user starts the next question himself
+                  reset(false)
               }
 
               // ------------------------------------------------------------------ panel
@@ -2219,6 +2225,108 @@ jobs:
               }
           }
           EOF
+      - name: File app/src/main/java/com/example/screenpen/Pages.kt
+        run: |
+          mkdir -p ScreenPen && cd ScreenPen
+          mkdir -p app/src/main/java/com/example/screenpen
+          cat > app/src/main/java/com/example/screenpen/Pages.kt <<'EOF'
+          package com.example.screenpen
+
+          import android.graphics.Color
+          import android.graphics.PixelFormat
+          import android.graphics.Typeface
+          import android.view.Gravity
+          import android.view.View
+          import android.view.ViewGroup
+          import android.view.WindowManager
+          import android.widget.LinearLayout
+          import android.widget.TextView
+
+          /** Small floating page bar: previous, new, delete, next, with the page number below. No background. */
+          class PagesOverlay(private val svc: OverlayService) {
+
+              private val p = Prefs.get(svc)
+              private val wm = svc.wm
+              private var root: LinearLayout? = null
+              private var label: TextView? = null
+              private var prev: IconView? = null
+              private var next: IconView? = null
+
+              val visible: Boolean get() = root != null
+
+              fun toggle() { if (visible) hide() else show() }
+
+              private fun button(ic: Ic, tint: Int, size: Int, click: () -> Unit): IconView {
+                  val v = IconView(svc, ic, tint, 2.2f, 0.62f)
+                  v.outline = 0xDD000000.toInt()
+                  v.layoutParams = LinearLayout.LayoutParams(size, size)
+                  v.setOnClickListener { click(); refresh() }
+                  Fx.attach(v, p.bool(K.TB_FX), p.bool(K.TB_VIB), p.int(K.TB_VIB_STR))
+                  return v
+              }
+
+              fun show() {
+                  if (root != null) return
+                  val c = svc
+                  val cell = c.dpi(34)
+                  val r = LinearLayout(c).apply {
+                      orientation = LinearLayout.VERTICAL
+                      gravity = Gravity.CENTER_HORIZONTAL
+                      setPadding(c.dpi(6), c.dpi(4), c.dpi(6), c.dpi(4))
+                  }
+                  val row = LinearLayout(c).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+                  val pv = button(Ic.BACK, Color.WHITE, cell) { svc.changePage(-1) }
+                  val add = button(Ic.PLUS, Color.WHITE, cell) { svc.addPage() }
+                  val del = button(Ic.TRASH, 0xFFFF7A7A.toInt(), cell) { svc.deletePage() }
+                  val nx = button(Ic.CHEV_R, Color.WHITE, cell) { svc.changePage(1) }
+                  row.addView(pv); row.addView(add); row.addView(del); row.addView(nx)
+                  val t = TextView(c).apply {
+                      textSize = 12.5f
+                      typeface = Typeface.DEFAULT_BOLD
+                      setTextColor(Color.WHITE)
+                      setShadowLayer(c.dp(3.5f), 0f, 0f, 0xFF000000.toInt())
+                      gravity = Gravity.CENTER
+                      setPadding(0, 0, 0, c.dpi(2))
+                  }
+                  r.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                  r.addView(t, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                  root = r; label = t; prev = pv; next = nx
+
+                  val params = WindowManager.LayoutParams(
+                      WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                      PixelFormat.TRANSLUCENT
+                  ).apply {
+                      gravity = Gravity.TOP or Gravity.START
+                      x = c.dpi(p.int(K.PG_X)); y = c.dpi(p.int(K.PG_Y))
+                  }
+                  wm.addView(r, params)
+                  // drag it by the page number or by the gaps between the icons
+                  svc.attachDrag(r, params, r, {}, null) {
+                      val d = c.resources.displayMetrics.density
+                      p.set(K.PG_X, (params.x / d).toInt())
+                      p.set(K.PG_Y, (params.y / d).toInt())
+                  }
+                  refresh()
+              }
+
+              fun refresh() {
+                  val i = svc.pageNumber()
+                  val n = svc.pageTotal()
+                  label?.text = "$i / $n"
+                  prev?.alpha = if (i > 1) 1f else 0.35f
+                  next?.alpha = if (i < n) 1f else 0.35f
+              }
+
+              fun hide() {
+                  root?.let { runCatching { wm.removeView(it) } }
+                  root = null; label = null; prev = null; next = null
+              }
+
+              fun destroy() = hide()
+          }
+          EOF
       - name: File app/src/main/java/com/example/screenpen/OverlayService.kt
         run: |
           mkdir -p ScreenPen && cd ScreenPen
@@ -2275,6 +2383,7 @@ jobs:
               private var bar: LinearLayout? = null
               private lateinit var barParams: WindowManager.LayoutParams
               private var timer: TimerOverlay? = null
+              private var pagesBar: PagesOverlay? = null
 
               private var interact = true // starts as the arrow; the user picks the pen first
               private var hidden = false
@@ -2352,6 +2461,7 @@ jobs:
                   wm.addView(v, drawParams)
 
                   timer = TimerOverlay(this)
+                  pagesBar = PagesOverlay(this)
                   if (p.bool(K.TM_ON)) timer?.show()
 
                   val b = LinearLayout(this)
@@ -2559,7 +2669,7 @@ jobs:
                                   p.set(K.LAST_ORIENT, orient)
                                   rebuildSoon()
                               })
-                              "pages" -> add(icon(Ic.PAGES, false), { pagesPanel(it) })
+                              "pages" -> add(icon(Ic.PAGES, pagesBar?.visible == true), { pagesBar?.toggle(); rebuildSoon() })
                               "timer" -> add(icon(Ic.TIMER, timer?.visible == true), {
                                   timer?.toggle(); rebuildSoon()
                               })
@@ -2767,31 +2877,9 @@ jobs:
                   showPanel(anchor, col)
               }
 
-              private fun pagesPanel(anchor: View) {
-                  refreshable(anchor) { refresh ->
-                      val col = PUi.vcol(tc)
-                      col.addView(PUi.title(tc, "PAGES"))
-                      val row = PUi.hrow(tc)
-                      row.gravity = Gravity.CENTER
-                      row.addView(PUi.iconBtn(tc, Ic.BACK) { gotoPage(doc.cur - 1); refresh() })
-                      val label = PUi.text(tc, "Page ${doc.cur + 1} of ${doc.pages.size}", 14f).apply { gravity = Gravity.CENTER }
-                      row.addView(label, PUi.lpW(tc, 120, ViewGroup.LayoutParams.WRAP_CONTENT))
-                      row.addView(PUi.iconBtn(tc, Ic.CHEV_R) { gotoPage(doc.cur + 1); refresh() })
-                      col.addView(row)
-                      val b = PUi.hrow(tc)
-                      b.setPadding(0, dpi(10), 0, 0)
-                      b.addView(PUi.pill(tc, "+ New page", true) {
-                          doc.pages.add(doc.cur + 1, Page()); gotoPage(doc.cur + 1); refresh()
-                      }, PUi.lpW(tc, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
-                      b.addView(PUi.pill(tc, "Delete page") {
-                          if (doc.pages.size > 1) { doc.pages.removeAt(doc.cur); doc.cur = doc.cur.coerceAtMost(doc.pages.size - 1) }
-                          else { doc.pages[0].strokes = ArrayList(); doc.pages[0].undo.clear(); doc.pages[0].redo.clear() }
-                          dv?.pageChanged(); scheduleSave(); refreshUndo(); refresh()
-                      }, PUi.lpW(tc, 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f, 2))
-                      col.addView(b)
-                      col
-                  }
-              }
+              // ---- pages (used by the floating page bar)
+              fun pageNumber(): Int = doc.cur + 1
+              fun pageTotal(): Int = doc.pages.size
 
               private fun gotoPage(i: Int) {
                   if (i < 0 || i >= doc.pages.size) return
@@ -2799,6 +2887,24 @@ jobs:
                   dv?.pageChanged()
                   scheduleSave()
                   refreshUndo()
+              }
+
+              fun changePage(delta: Int) = gotoPage(doc.cur + delta)
+
+              fun addPage() {
+                  doc.pages.add(doc.cur + 1, Page())
+                  gotoPage(doc.cur + 1)
+              }
+
+              fun deletePage() {
+                  if (doc.pages.size > 1) {
+                      doc.pages.removeAt(doc.cur)
+                      doc.cur = doc.cur.coerceAtMost(doc.pages.size - 1)
+                  } else {
+                      val pg = doc.pages[0]
+                      pg.strokes = ArrayList(); pg.undo.clear(); pg.redo.clear()
+                  }
+                  dv?.pageChanged(); scheduleSave(); refreshUndo()
               }
 
               // ------------------------------------------------------------------ teardown
@@ -2809,10 +2915,11 @@ jobs:
                       if (p.bool(K.AUTOSAVE)) Store.saveSync(this, doc)
                       dismissPanel()
                       timer?.destroy()
+                      pagesBar?.destroy()
                       bar?.let { runCatching { wm.removeView(it) } }
                       dv?.let { runCatching { wm.removeView(it) } }
                   }
-                  dv = null; bar = null; timer = null
+                  dv = null; bar = null; timer = null; pagesBar = null
                   running = false
                   super.onDestroy()
               }
