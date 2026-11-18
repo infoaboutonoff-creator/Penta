@@ -211,6 +211,9 @@ jobs:
           import android.animation.ValueAnimator
           import android.content.Context
           import android.graphics.Canvas
+          import android.graphics.ColorFilter
+          import android.graphics.PixelFormat
+          import android.graphics.drawable.Drawable
           import android.graphics.Color
           import android.graphics.DashPathEffect
           import android.graphics.Paint
@@ -565,6 +568,22 @@ jobs:
                   return true
               }
           }
+
+          /** Rounded background whose corners go from sharp square (0) to a fully round pill (100). */
+          class PillDrawable(private val color: Int, private val pct: Int) : Drawable() {
+              private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+              private val rect = RectF()
+              override fun draw(c: Canvas) {
+                  rect.set(bounds)
+                  val r = pct.coerceIn(0, 100) / 100f * min(rect.width(), rect.height()) / 2f
+                  paint.color = color
+                  c.drawRoundRect(rect, r, r, paint)
+              }
+              override fun setAlpha(alpha: Int) {}
+              override fun setColorFilter(cf: ColorFilter?) {}
+              @Deprecated("Deprecated in Java")
+              override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+          }
           EOF
       - name: File app/src/main/java/com/example/screenpen/Prefs.kt
         run: |
@@ -621,6 +640,7 @@ jobs:
               const val TM_VIB_STR = "tmVibStr"
               const val TM_SHOW_RESET = "tmShowReset"
               const val THEME = "theme"
+              const val TM_ROUND = "tmRound"
               const val PG_X = "pgX"
               const val PG_Y = "pgY"
           }
@@ -651,7 +671,7 @@ jobs:
                       K.TB_DIR to "down", K.TB_FX to true, K.TB_VIB to true, K.TB_VIB_STR to 3,
                       K.TM_FX to true, K.TM_VIB to true, K.TM_VIB_STR to 3, K.TM_SHOW_RESET to true,
                       K.THEME to "light",
-                      K.PG_X to 24, K.PG_Y to 330
+                      K.PG_X to 24, K.PG_Y to 330, K.TM_ROUND to 85
                   )
 
                   val ITEMS: List<Item> = listOf(
@@ -992,11 +1012,11 @@ jobs:
               }
 
               /** One quick glow and buzz, for taps that are handled in code (timer). */
-              fun pulse(v: View, glow: Boolean, vib: Boolean, strength: Int) {
+              fun pulse(v: View, glow: Boolean, vib: Boolean, strength: Int, roundPct: Int = 100) {
                   if (vib) Haptics.buzz(v.context, strength)
                   if (!glow) return
                   val d = glowOf(v)
-                  d.cornerRadius = if (v.width > 0) min(v.width, v.height) / 2f else v.context.dp(12f)
+                  d.cornerRadius = if (v.width > 0) roundPct.coerceIn(0, 100) / 100f * min(v.width, v.height) / 2f else v.context.dp(12f)
                   ValueAnimator.ofInt(150, 0).apply {
                       duration = 520
                       addUpdateListener { d.alpha = it.animatedValue as Int }
@@ -2053,13 +2073,17 @@ jobs:
                   val r = root ?: return
                   val t = tv ?: return
                   val c = svc
-                  r.background = roundBg(withAlpha(p.int(K.TM_BG), p.int(K.TM_ALPHA) * 255 / 100), c.dp(16f))
+                  r.background = PillDrawable(withAlpha(p.int(K.TM_BG), p.int(K.TM_ALPHA) * 255 / 100), p.int(K.TM_ROUND))
                   val logOn = p.bool(K.TM_LOG)
                   val resetOn = p.bool(K.TM_SHOW_RESET)
                   nextBtn?.visibility = if (logOn) View.VISIBLE else View.GONE
                   resetBtn?.visibility = if (resetOn) View.VISIBLE else View.GONE
-                  r.setPadding(c.dpi(10), c.dpi(4), if (logOn || resetOn) c.dpi(3) else c.dpi(10), c.dpi(4))
                   val size = p.int(K.TM_SIZE).toFloat()
+                  val k = size / 15f // the whole bubble grows or shrinks together with the time
+                  val padX = (c.dp(10f) * k).toInt()
+                  val padY = (c.dp(4f) * k).toInt()
+                  r.setPadding(padX, padY, if (logOn || resetOn) (c.dp(3f) * k).toInt() else padX, padY)
+                  for (b in listOf(resetBtn, nextBtn)) b?.layoutParams = LinearLayout.LayoutParams((c.dp(28f) * k).toInt(), (c.dp(30f) * k).toInt())
                   t.textSize = size
                   val sample = when (p.str(K.TM_FMT)) { "hms" -> "00:00:00"; "mst" -> "00:00.0"; "s" -> "000"; else -> "00:00" }
                   val pp = android.graphics.Paint(t.paint)
@@ -2126,7 +2150,7 @@ jobs:
 
               private fun pause() { acc = elapsed(); state = 2; render() }
 
-              private fun pulse(v: View) = Fx.pulse(v, p.bool(K.TM_FX), p.bool(K.TM_VIB), p.int(K.TM_VIB_STR))
+              private fun pulse(v: View) = Fx.pulse(v, p.bool(K.TM_FX), p.bool(K.TM_VIB), p.int(K.TM_VIB_STR), p.int(K.TM_ROUND))
 
               private fun tap() {
                   root?.let { pulse(it) }
@@ -2670,9 +2694,7 @@ jobs:
                                   rebuildSoon()
                               })
                               "pages" -> add(icon(Ic.PAGES, pagesBar?.visible == true), { pagesBar?.toggle(); rebuildSoon() })
-                              "timer" -> add(icon(Ic.TIMER, timer?.visible == true), {
-                                  timer?.toggle(); rebuildSoon()
-                              })
+                              "timer" -> add(icon(Ic.TIMER, timer?.visible == true), { timerPanel(it) })
                               "save" -> add(icon(Ic.SAVE, false), { saveImage() })
                               "clear" -> add(icon(Ic.TRASH, false), { dv?.clearPage() })
                               "close" -> add(icon(Ic.CLOSE, false, 0xFFFF6B6B.toInt()), { stopSelf() })
@@ -2859,6 +2881,29 @@ jobs:
                   col.addView(PUi.title(tc, "AFTER ERASING"))
                   col.addView(PUi.switchRow(tc, "Switch back to pen", p.bool(K.ER_AUTO)) { p.set(K.ER_AUTO, it) })
                   showPanel(anchor, col)
+              }
+
+              private fun timerPanel(anchor: View) {
+                  refreshable(anchor) { refresh ->
+                      val col = PUi.vcol(tc)
+                      fun gap(v: View): View = v.also { it.setPadding(0, dpi(5), 0, dpi(5)) }
+                      col.addView(PUi.title(tc, "TIMER"))
+                      col.addView(gap(PUi.switchRow(tc, "Show timer", timer?.visible == true) { on ->
+                          if (on) timer?.show() else timer?.hide()
+                          rebuildSoon()
+                      }))
+                      col.addView(PUi.title(tc, "BUBBLE SIZE"))
+                      val sizeRow = PUi.hrow(tc)
+                      sizeRow.addView(PUi.text(tc, "A", 11f, 0xFF8A94A8.toInt()), PUi.lpW(tc, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f, 2))
+                      sizeRow.addView(PUi.slider(tc, 10, 40, p.int(K.TM_SIZE)) { p.set(K.TM_SIZE, it) },
+                          LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                      sizeRow.addView(PUi.text(tc, "A", 20f, 0xFF8A94A8.toInt()), PUi.lpW(tc, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f, 2))
+                      col.addView(sizeRow)
+                      col.addView(PUi.title(tc, "BUTTONS ON THE BUBBLE"))
+                      col.addView(gap(PUi.switchRow(tc, "Question tag (Next)", p.bool(K.TM_LOG)) { p.set(K.TM_LOG, it) }))
+                      col.addView(gap(PUi.switchRow(tc, "Reset button", p.bool(K.TM_SHOW_RESET)) { p.set(K.TM_SHOW_RESET, it) }))
+                      col
+                  }
               }
 
               private fun shapesPanel(anchor: View) {
@@ -3487,7 +3532,7 @@ jobs:
                   fontFeatureSettings = "tnum"
                   gravity = Gravity.CENTER
                   setPadding(dpi(12), dpi(5), dpi(12), dpi(5))
-                  background = roundBg(withAlpha(p.int(K.TM_BG), p.int(K.TM_ALPHA) * 255 / 100), dp(16f))
+                  background = PillDrawable(withAlpha(p.int(K.TM_BG), p.int(K.TM_ALPHA) * 255 / 100), p.int(K.TM_ROUND))
               }
 
               private fun buildTimer(body: LinearLayout) {
@@ -3504,7 +3549,7 @@ jobs:
                   }
                   fill()
                   refreshers.add { fill() }
-                  note(body, "Preview: normal, warning and overtime.")
+                  note(body, "Preview: normal, warning and overtime. Corner roundness: 0% is a sharp square, 100% is a fully round pill.")
 
                   section(body, "Behaviour")
                   val c = card(body)
@@ -3574,7 +3619,7 @@ jobs:
                   switchRow(c, "Keep counting after zero", "Shows +00:12 in red so you can see how far you went over.", K.TM_OVERTIME)
                   sliderRow(c, "Warning starts", K.TM_WARN_AT, 0, 60, "s before end", 5)
                   segRow(c, "Alert at zero", K.TM_ALERT, listOf("none" to "None", "vib" to "Vibrate", "snd" to "Sound", "both" to "Both"))
-                  switchRow(c, "Question log", "Adds a Next button that saves the time taken for each question.", K.TM_LOG)
+                  switchRow(c, "Question tag", "Adds a Next button that saves the time taken for each question.", K.TM_LOG)
                   switchRow(c, "Show reset button", "A small reset icon beside the time, so you do not need to open the panel.", K.TM_SHOW_RESET)
                   navRow(c, Ic.PAGES, "View question log", "Times you saved with Next") { push("Question log") { buildLog(it) } }
 
@@ -3587,7 +3632,8 @@ jobs:
                   section(body, "Look")
                   val l = card(body)
                   segRow(l, "Time format", K.TM_FMT, listOf("ms" to "mm:ss", "hms" to "hh:mm:ss", "mst" to "mm:ss.t", "s" to "Seconds"))
-                  sliderRow(l, "Text size", K.TM_SIZE, 10, 40, "sp")
+                  sliderRow(l, "Bubble size", K.TM_SIZE, 10, 40, "")
+                  sliderRow(l, "Corner roundness", K.TM_ROUND, 0, 100, "%")
                   sliderRow(l, "Transparency", K.TM_ALPHA, 30, 100, "%")
                   colorRow(l, "Text colour", K.TM_TEXT)
                   colorRow(l, "Background colour", K.TM_BG)
