@@ -641,6 +641,9 @@ jobs:
               const val TM_SHOW_RESET = "tmShowReset"
               const val THEME = "theme"
               const val TM_ROUND = "tmRound"
+              const val PG_OUTLINE = "pgOutline"
+              const val PG_BG = "pgBg"
+              const val PG_BG_ALPHA = "pgBgAlpha"
               const val PG_X = "pgX"
               const val PG_Y = "pgY"
           }
@@ -671,7 +674,8 @@ jobs:
                       K.TB_DIR to "down", K.TB_FX to true, K.TB_VIB to true, K.TB_VIB_STR to 3,
                       K.TM_FX to true, K.TM_VIB to true, K.TM_VIB_STR to 3, K.TM_SHOW_RESET to true,
                       K.THEME to "light",
-                      K.PG_X to 24, K.PG_Y to 330, K.TM_ROUND to 85
+                      K.PG_X to 24, K.PG_Y to 330, K.TM_ROUND to 85,
+                      K.PG_OUTLINE to true, K.PG_BG to 0xFF1E2430.toInt(), K.PG_BG_ALPHA to 0
                   )
 
                   val ITEMS: List<Item> = listOf(
@@ -2275,6 +2279,7 @@ jobs:
               private var label: TextView? = null
               private var prev: IconView? = null
               private var next: IconView? = null
+              private var btns: List<IconView> = emptyList()
 
               val visible: Boolean get() = root != null
 
@@ -2282,7 +2287,6 @@ jobs:
 
               private fun button(ic: Ic, tint: Int, size: Int, click: () -> Unit): IconView {
                   val v = IconView(svc, ic, tint, 2.2f, 0.62f)
-                  v.outline = 0xDD000000.toInt()
                   v.layoutParams = LinearLayout.LayoutParams(size, size)
                   v.setOnClickListener { click(); refresh() }
                   Fx.attach(v, p.bool(K.TB_FX), p.bool(K.TB_VIB), p.int(K.TB_VIB_STR))
@@ -2315,6 +2319,7 @@ jobs:
                   r.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                   r.addView(t, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                   root = r; label = t; prev = pv; next = nx
+                  btns = listOf(pv, add, del, nx)
 
                   val params = WindowManager.LayoutParams(
                       WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
@@ -2332,7 +2337,18 @@ jobs:
                       p.set(K.PG_X, (params.x / d).toInt())
                       p.set(K.PG_Y, (params.y / d).toInt())
                   }
+                  applyStyle()
                   refresh()
+              }
+
+              /** Black outline on or off, and an optional coloured background of adjustable darkness. */
+              fun applyStyle() {
+                  val r = root ?: return
+                  val outline = if (p.bool(K.PG_OUTLINE)) 0xDD000000.toInt() else 0
+                  for (b in btns) { b.outline = outline; b.invalidate() }
+                  label?.setShadowLayer(if (outline != 0) svc.dp(3.5f) else 0f, 0f, 0f, 0xFF000000.toInt())
+                  val a = p.int(K.PG_BG_ALPHA)
+                  r.background = if (a > 0) roundBg(withAlpha(p.int(K.PG_BG), a * 255 / 100), svc.dp(14f)) else null
               }
 
               fun refresh() {
@@ -2345,7 +2361,7 @@ jobs:
 
               fun hide() {
                   root?.let { runCatching { wm.removeView(it) } }
-                  root = null; label = null; prev = null; next = null
+                  root = null; label = null; prev = null; next = null; btns = emptyList()
               }
 
               fun destroy() = hide()
@@ -2522,6 +2538,7 @@ jobs:
                       K.PEN_COLOR, K.PEN_W -> { applyDraw(); rebuildSoon(0) }
                       K.HL_W, K.ER_TYPE, K.ER_W, K.STRAIGHT, K.PALM -> applyDraw()
                       K.TB_ITEMS, K.TB_SIZE, K.TB_ALPHA, K.TB_COLOR, K.TB_DIR, K.TB_FX, K.TB_VIB, K.TB_VIB_STR -> rebuildSoon(0)
+                      K.PG_OUTLINE, K.PG_BG, K.PG_BG_ALPHA -> pagesBar?.applyStyle()
                       else -> if (key.startsWith("tm") && key != K.TM_X && key != K.TM_Y && key != K.TM_ON) timer?.applyStyle()
                   }
               }
@@ -2693,8 +2710,12 @@ jobs:
                                   p.set(K.LAST_ORIENT, orient)
                                   rebuildSoon()
                               })
-                              "pages" -> add(icon(Ic.PAGES, pagesBar?.visible == true), { pagesBar?.toggle(); rebuildSoon() })
-                              "timer" -> add(icon(Ic.TIMER, timer?.visible == true), { timerPanel(it) })
+                              "pages" -> add(icon(Ic.PAGES, pagesBar?.visible == true), {
+                                  pagesBar?.toggle(); rebuildSoon()
+                              }, { pagesPanel(it) })
+                              "timer" -> add(icon(Ic.TIMER, timer?.visible == true), {
+                                  timer?.toggle(); rebuildSoon()
+                              }, { timerPanel(it) })
                               "save" -> add(icon(Ic.SAVE, false), { saveImage() })
                               "clear" -> add(icon(Ic.TRASH, false), { dv?.clearPage() })
                               "close" -> add(icon(Ic.CLOSE, false, 0xFFFF6B6B.toInt()), { stopSelf() })
@@ -2887,11 +2908,6 @@ jobs:
                   refreshable(anchor) { refresh ->
                       val col = PUi.vcol(tc)
                       fun gap(v: View): View = v.also { it.setPadding(0, dpi(5), 0, dpi(5)) }
-                      col.addView(PUi.title(tc, "TIMER"))
-                      col.addView(gap(PUi.switchRow(tc, "Show timer", timer?.visible == true) { on ->
-                          if (on) timer?.show() else timer?.hide()
-                          rebuildSoon()
-                      }))
                       col.addView(PUi.title(tc, "BUBBLE SIZE"))
                       val sizeRow = PUi.hrow(tc)
                       sizeRow.addView(PUi.text(tc, "A", 11f, 0xFF8A94A8.toInt()), PUi.lpW(tc, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f, 2))
@@ -2902,6 +2918,26 @@ jobs:
                       col.addView(PUi.title(tc, "BUTTONS ON THE BUBBLE"))
                       col.addView(gap(PUi.switchRow(tc, "Question tag (Next)", p.bool(K.TM_LOG)) { p.set(K.TM_LOG, it) }))
                       col.addView(gap(PUi.switchRow(tc, "Reset button", p.bool(K.TM_SHOW_RESET)) { p.set(K.TM_SHOW_RESET, it) }))
+                      col
+                  }
+              }
+
+              private fun pagesPanel(anchor: View) {
+                  refreshable(anchor) { refresh ->
+                      val col = PUi.vcol(tc)
+                      col.addView(PUi.title(tc, "PAGE BAR LOOK"))
+                      col.addView(PUi.switchRow(tc, "Black outline", p.bool(K.PG_OUTLINE)) { p.set(K.PG_OUTLINE, it) }.also { it.setPadding(0, dpi(4), 0, dpi(4)) })
+                      col.addView(PUi.title(tc, "BACKGROUND DARKNESS  ·  0 = NONE"))
+                      val row = PUi.hrow(tc)
+                      val label = PUi.text(tc, "${p.int(K.PG_BG_ALPHA)}%", 12f, 0xFF8A94A8.toInt()).apply { gravity = Gravity.END }
+                      row.addView(PUi.slider(tc, 0, 100, p.int(K.PG_BG_ALPHA)) { v -> p.set(K.PG_BG_ALPHA, v); label.text = "$v%" },
+                          LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                      row.addView(label, PUi.lpW(tc, 40, ViewGroup.LayoutParams.WRAP_CONTENT))
+                      col.addView(row)
+                      col.addView(PUi.title(tc, "BACKGROUND COLOUR"))
+                      val cur = p.int(K.PG_BG)
+                      val pal = C.PALETTE.toList()
+                      for (r in 0..1) col.addView(swatchRow(pal.subList(r * 8, r * 8 + 8), cur, { p.set(K.PG_BG, it); refresh() }))
                       col
                   }
               }
@@ -3398,7 +3434,7 @@ jobs:
                   navRow(s, Ic.PEN, "Pen and highlighter", "Colours, thickness, straight lines") { push("Pen and highlighter") { buildPen(it) } }
                   navRow(s, Ic.ERASER, "Eraser", "Type, size, auto switch") { push("Eraser") { buildEraser(it) } }
                   navRow(s, Ic.TIMER, "Timer", "Format, colours, alerts, question log") { push("Timer") { buildTimer(it) } }
-                  navRow(s, Ic.PAGES, "Pages and saving", "Auto-save, palm protection") { push("Pages and saving") { buildSaving(it) } }
+                  navRow(s, Ic.PAGES, "Pages and saving", "Page bar look, auto-save, palm protection") { push("Pages and saving") { buildSaving(it) } }
 
               }
 
@@ -3674,6 +3710,40 @@ jobs:
 
               // ------------------------------------------------------------------ saving
               private fun buildSaving(body: LinearLayout) {
+                  // ---- preview of the floating page bar on a neutral backdrop
+                  val pc = card(body)
+                  pc.setBackgroundColor(Color.TRANSPARENT)
+                  pc.background = roundBg(0xFF8C97AB.toInt(), dp(16f))
+                  val stage = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(0, dpi(18), 0, dpi(18)) }
+                  pc.addView(stage)
+                  fun fillPreview() {
+                      stage.removeAllViews()
+                      val outline = if (p.bool(K.PG_OUTLINE)) 0xDD000000.toInt() else 0
+                      val bar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL; setPadding(dpi(8), dpi(6), dpi(8), dpi(6)) }
+                      val a = p.int(K.PG_BG_ALPHA)
+                      if (a > 0) bar.background = roundBg(withAlpha(p.int(K.PG_BG), a * 255 / 100), dp(14f))
+                      val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                      for ((ic, tint) in listOf(Ic.BACK to Color.WHITE, Ic.PLUS to Color.WHITE, Ic.TRASH to 0xFFFF7A7A.toInt(), Ic.CHEV_R to Color.WHITE)) {
+                          row.addView(IconView(this, ic, tint, 2.2f, 0.62f).apply { this.outline = outline }, LinearLayout.LayoutParams(dpi(36), dpi(36)))
+                      }
+                      bar.addView(row)
+                      bar.addView(tv("2 / 5", 12.5f, Color.WHITE, true).apply {
+                          gravity = Gravity.CENTER
+                          if (outline != 0) setShadowLayer(dp(3.5f), 0f, 0f, Color.BLACK)
+                      })
+                      stage.addView(bar)
+                  }
+                  fillPreview()
+                  refreshers.add { fillPreview() }
+                  note(body, "Preview of the floating page bar. You can also long-press the paper icon in the toolbar to change these.")
+
+                  section(body, "Page bar")
+                  val pb = card(body)
+                  switchRow(pb, "Black outline", "A thin black edge around each icon so it stays visible with no background.", K.PG_OUTLINE)
+                  sliderRow(pb, "Background darkness", K.PG_BG_ALPHA, 0, 100, "%")
+                  colorRow(pb, "Background colour", K.PG_BG)
+
+                  section(body, "Saving")
                   val c = card(body)
                   switchRow(c, "Auto-save pages", "Your writing is restored the next time you start the pen.", K.AUTOSAVE)
                   segRow(c, "Palm protection", K.PALM, listOf("off" to "Off", "palm" to "Ignore palm", "stylus" to "Stylus only"))
